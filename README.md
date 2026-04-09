@@ -21,7 +21,10 @@ The current bootstrap implementation already includes:
 - publishing normalized raw events to Kafka topic `sentinel.raw-events`
 - a `classification` consumer that reads `sentinel.raw-events`
 - publication of analyzable classified events to `sentinel.classified-events`
-- integration tests that verify both webhook-to-Kafka and raw-to-classified Kafka delivery
+- an `analysis` consumer that reads `sentinel.classified-events`
+- publication of bootstrap `AnalysisResult` records to `sentinel.analysis-results`
+- a replaceable `LlmClient` boundary for future provider integrations
+- integration tests that verify webhook-to-Kafka, raw-to-classified, and classified-to-analysis delivery
 
 ## Current Stack
 
@@ -73,7 +76,7 @@ For internal planning and day-to-day development notes, use a local folder such 
 ## Suggested Next Steps
 
 1. Introduce Redis-backed deduplication to the `classification` stage.
-2. Implement the first Analyzer consumer for `sentinel.classified-events`.
-3. Add an LLM client abstraction and the first provider integration.
+2. Add the `evaluation` consumer for `sentinel.analysis-results`.
+3. Replace the bootstrap `LlmClient` with a real provider integration.
 4. Replace the Slack placeholder with a real delivery client.
 5. Add OpenTelemetry and end-to-end trace propagation.

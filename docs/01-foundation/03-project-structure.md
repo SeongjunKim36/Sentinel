@@ -91,6 +91,7 @@ Handles lightweight pre-LLM event decisions.
 
 Owns LLM-based enrichment and structured result creation.
 
+- `LlmClient` abstraction and provider implementations
 - prompt loading
 - provider calls
 - parsing

@@ -1,5 +1,6 @@
 package io.github.seongjunkim36.sentinel
 
+import io.github.seongjunkim36.sentinel.shared.AnalysisResult
 import io.github.seongjunkim36.sentinel.shared.ClassifiedEvent
 import io.github.seongjunkim36.sentinel.shared.Event
 import org.apache.kafka.clients.admin.NewTopic
@@ -47,6 +48,16 @@ class SentinelKafkaConfiguration {
         )
 
     @Bean
+    fun analysisResultProducerFactory(
+        @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
+        jsonMapper: JsonMapper,
+    ): ProducerFactory<String, AnalysisResult> =
+        jsonProducerFactory(
+            bootstrapServers = bootstrapServers,
+            valueSerializer = JacksonJsonSerializer<AnalysisResult>(jsonMapper).noTypeInfo(),
+        )
+
+    @Bean
     fun eventConsumerFactory(
         @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
         jsonMapper: JsonMapper,
@@ -63,6 +74,18 @@ class SentinelKafkaConfiguration {
         )
 
     @Bean
+    fun classifiedEventConsumerFactory(
+        @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
+        jsonMapper: JsonMapper,
+    ): ConsumerFactory<String, ClassifiedEvent> =
+        jsonConsumerFactory(
+            bootstrapServers = bootstrapServers,
+            valueDeserializer = JacksonJsonDeserializer(ClassifiedEvent::class.java, jsonMapper)
+                .trustedPackages("io.github.seongjunkim36.sentinel")
+                .ignoreTypeHeaders(),
+        )
+
+    @Bean
     fun eventKafkaTemplate(
         eventProducerFactory: ProducerFactory<String, Event>,
     ): KafkaTemplate<String, Event> = KafkaTemplate(eventProducerFactory)
@@ -73,12 +96,21 @@ class SentinelKafkaConfiguration {
     ): KafkaTemplate<String, ClassifiedEvent> = KafkaTemplate(classifiedEventProducerFactory)
 
     @Bean
+    fun analysisResultKafkaTemplate(
+        analysisResultProducerFactory: ProducerFactory<String, AnalysisResult>,
+    ): KafkaTemplate<String, AnalysisResult> = KafkaTemplate(analysisResultProducerFactory)
+
+    @Bean
     fun eventKafkaListenerContainerFactory(
         eventConsumerFactory: ConsumerFactory<String, Event>,
     ): ConcurrentKafkaListenerContainerFactory<String, Event> =
-        ConcurrentKafkaListenerContainerFactory<String, Event>().apply {
-            setConsumerFactory(eventConsumerFactory)
-        }
+        jsonKafkaListenerContainerFactory(eventConsumerFactory)
+
+    @Bean
+    fun classifiedEventKafkaListenerContainerFactory(
+        classifiedEventConsumerFactory: ConsumerFactory<String, ClassifiedEvent>,
+    ): ConcurrentKafkaListenerContainerFactory<String, ClassifiedEvent> =
+        jsonKafkaListenerContainerFactory(classifiedEventConsumerFactory)
 
     @Bean
     fun sentinelTopics(): KafkaAdmin.NewTopics =
@@ -108,4 +140,24 @@ class SentinelKafkaConfiguration {
             StringSerializer(),
             valueSerializer,
         )
+
+    private fun <T : Any> jsonConsumerFactory(
+        bootstrapServers: String,
+        valueDeserializer: JacksonJsonDeserializer<T>,
+    ): ConsumerFactory<String, T> =
+        DefaultKafkaConsumerFactory(
+            mutableMapOf<String, Any>(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
+            ),
+            StringDeserializer(),
+            valueDeserializer,
+        )
+
+    private fun <T : Any> jsonKafkaListenerContainerFactory(
+        consumerFactory: ConsumerFactory<String, T>,
+    ): ConcurrentKafkaListenerContainerFactory<String, T> =
+        ConcurrentKafkaListenerContainerFactory<String, T>().apply {
+            setConsumerFactory(consumerFactory)
+        }
 }

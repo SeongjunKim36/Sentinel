@@ -32,7 +32,22 @@ class ClassifiedEventAnalysisConsumer(
             return
         }
 
-        val analysisResult = analysisService.analyze(classifiedEvent)
-        analysisResultPublisher.publish(analysisResult)
+        try {
+            val analysisResult = analysisService.analyze(classifiedEvent)
+            analysisResultPublisher.publish(analysisResult)
+        } catch (exception: Exception) {
+            logger.error(
+                "Analysis failed after retry policy; publishing fallback routing result: eventId={}, tenantId={}",
+                classifiedEvent.event.id,
+                classifiedEvent.event.tenantId,
+                exception,
+            )
+            analysisResultPublisher.publish(
+                analysisService.toFailureResult(
+                    classifiedEvent = classifiedEvent,
+                    exception = exception,
+                ),
+            )
+        }
     }
 }

@@ -2,6 +2,7 @@ package io.github.seongjunkim36.sentinel.evaluation
 
 import io.github.seongjunkim36.sentinel.delivery.DeliveryProperties
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
+import io.github.seongjunkim36.sentinel.shared.ResultCategories
 import io.github.seongjunkim36.sentinel.shared.RoutingDecision
 import io.github.seongjunkim36.sentinel.shared.RoutingPriority
 import io.github.seongjunkim36.sentinel.shared.Severity
@@ -12,6 +13,20 @@ class EvaluationService(
     private val deliveryProperties: DeliveryProperties,
 ) {
     fun evaluate(result: AnalysisResult): AnalysisResult {
+        if (result.category == ResultCategories.ANALYSIS_FAILURE) {
+            return result.copy(
+                routing = RoutingDecision(
+                    channels =
+                        if (result.routing.channels.isNotEmpty()) {
+                            result.routing.channels
+                        } else {
+                            deliveryProperties.defaultChannels
+                        },
+                    priority = RoutingPriority.IMMEDIATE,
+                ),
+            )
+        }
+
         val priority = when (result.severity) {
             Severity.CRITICAL,
             Severity.HIGH,

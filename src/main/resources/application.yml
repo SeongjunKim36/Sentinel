@@ -34,6 +34,14 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger - %msg%n"
 
 sentinel:
+  analysis:
+    retry:
+      max-attempts: ${SENTINEL_ANALYSIS_RETRY_MAX_ATTEMPTS:3}
+      initial-backoff: ${SENTINEL_ANALYSIS_RETRY_INITIAL_BACKOFF:PT0.2S}
+      multiplier: ${SENTINEL_ANALYSIS_RETRY_MULTIPLIER:2.0}
+      max-backoff: ${SENTINEL_ANALYSIS_RETRY_MAX_BACKOFF:PT2S}
+    failure-routing:
+      channels: ${SENTINEL_ANALYSIS_FAILURE_ROUTING_CHANNELS:telegram}
   classification:
     deduplication:
       enabled: ${SENTINEL_CLASSIFICATION_DEDUPLICATION_ENABLED:true}

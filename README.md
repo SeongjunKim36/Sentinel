@@ -10,7 +10,7 @@ The current goal is to turn the original Phase 1 MVP into a working codebase.
 
 - Source: Sentry webhook
 - Pipeline: event ingestion -> Kafka -> classification -> LLM root cause analysis -> evaluation and routing
-- Output: Slack notification, with Telegram available for fast local delivery testing
+- Output: Slack notification, with Telegram available for fast local delivery testing and analysis failure alerts
 - Infrastructure: local development with Docker Compose
 - Observability: end-to-end traceability by trace ID
 
@@ -23,8 +23,11 @@ The current bootstrap implementation already includes:
 - Redis-backed duplicate suppression in `classification` by `tenantId + sourceType + sourceId`
 - publication of analyzable classified events to `sentinel.classified-events`
 - an `analysis` consumer that reads `sentinel.classified-events`
+- retry + exponential backoff policy for LLM analysis calls
+- fallback `analysis-failure` result publication when retries are exhausted
 - publication of bootstrap `AnalysisResult` records to `sentinel.analysis-results`
 - an `evaluation` consumer that reads `sentinel.analysis-results`
+- preservation of explicit Telegram routing for `analysis-failure` alerts
 - publication of routed results to `sentinel.routed-results`
 - a `delivery` consumer that dispatches routed results to output plugins
 - a real `SlackOutputPlugin` backed by Slack `chat.postMessage`
@@ -136,10 +139,23 @@ export SENTINEL_CLASSIFICATION_DEDUPLICATION_KEY_PREFIX=sentinel:classification:
 
 If Redis is unavailable, Sentinel falls back to in-memory deduplication in the running process.
 
+## Analysis Retry and Failure Routing
+
+Analysis calls are retried with configurable exponential backoff before emitting a fallback `analysis-failure` result.
+
+```bash
+export SENTINEL_ANALYSIS_RETRY_MAX_ATTEMPTS=3
+export SENTINEL_ANALYSIS_RETRY_INITIAL_BACKOFF=PT0.2S
+export SENTINEL_ANALYSIS_RETRY_MULTIPLIER=2.0
+export SENTINEL_ANALYSIS_RETRY_MAX_BACKOFF=PT2S
+export SENTINEL_ANALYSIS_FAILURE_ROUTING_CHANNELS=telegram
+```
+
+When retries are exhausted, Sentinel publishes a critical `analysis-failure` result and routes it to Telegram immediately by default.
+
 ## Suggested Next Steps
 
 1. Replace the bootstrap `LlmClient` with a real provider integration.
 2. Add OpenTelemetry and end-to-end trace propagation.
-3. Add a reproducible local demo scenario that exercises failure and retry flows.
-4. Persist delivery attempts and failures for auditability.
-5. Add a dead-letter handling and replay workflow.
+3. Persist delivery attempts and failures for auditability.
+4. Add a dead-letter handling and replay workflow.

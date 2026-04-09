@@ -106,6 +106,23 @@ export SENTINEL_SLACK_DEFAULT_CHANNEL=C01234567
 
 With those values in place, routed results will be sent to the configured Slack channel.
 
+## Local Demo
+
+You can exercise the full webhook-to-delivery path locally with the included sample payload.
+
+1. Start the local infrastructure.
+2. Run the application.
+3. Configure either Telegram or Slack delivery in your shell.
+4. Send the sample Sentry payload.
+
+```bash
+docker compose -f docker/compose.yml up -d
+./gradlew bootRun
+./scripts/send-sample-sentry-event.sh
+```
+
+The sample request body lives at `samples/sentry/checkout-timeout.json`.
+
 ## Suggested Next Steps
 
 1. Introduce Redis-backed deduplication to the `classification` stage.

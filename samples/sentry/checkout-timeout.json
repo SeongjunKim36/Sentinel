@@ -1,0 +1,18 @@
+{
+  "event_id": "evt-checkout-timeout-001",
+  "message": "Checkout timeout after deploy",
+  "level": "error",
+  "platform": "kotlin",
+  "logger": "io.github.seongjunkim36.sentinel.checkout",
+  "culprit": "CheckoutService.placeOrder",
+  "tags": [
+    {
+      "key": "environment",
+      "value": "local"
+    },
+    {
+      "key": "service",
+      "value": "checkout-api"
+    }
+  ]
+}

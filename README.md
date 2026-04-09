@@ -30,6 +30,7 @@ The current bootstrap implementation already includes:
 - preservation of explicit Telegram routing for `analysis-failure` alerts
 - publication of routed results to `sentinel.routed-results`
 - a `delivery` consumer that dispatches routed results to output plugins
+- persistence of every delivery attempt (success/failure) to PostgreSQL for auditability
 - a real `SlackOutputPlugin` backed by Slack `chat.postMessage`
 - a real `TelegramOutputPlugin` for end-to-end delivery testing
 - a replaceable `LlmClient` boundary for future provider integrations
@@ -127,6 +128,14 @@ docker compose -f docker/compose.yml up -d
 
 The sample request body lives at `samples/sentry/checkout-timeout.json`.
 
+## Delivery Attempt Audit
+
+Sentinel persists each channel delivery attempt (including failures and plugin-missing cases) in PostgreSQL table `delivery_attempt`.
+
+- Flyway migration: `V2__delivery_attempts.sql`
+- Query endpoint: `GET /api/v1/delivery-attempts`
+- Supported filters: `eventId`, `tenantId`, `channel`, `success`, `limit`
+
 ## Classification Deduplication
 
 Classification deduplication is enabled by default and prevents duplicate analyzable events from being sent downstream repeatedly.
@@ -157,5 +166,4 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 
 1. Replace the bootstrap `LlmClient` with a real provider integration.
 2. Add OpenTelemetry and end-to-end trace propagation.
-3. Persist delivery attempts and failures for auditability.
-4. Add a dead-letter handling and replay workflow.
+3. Add a dead-letter handling and replay workflow.

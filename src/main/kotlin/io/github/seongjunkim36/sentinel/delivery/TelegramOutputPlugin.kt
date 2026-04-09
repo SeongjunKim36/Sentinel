@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClientException
 class TelegramOutputPlugin(
     @Qualifier("sentinelRestClientBuilder") restClientBuilder: RestClient.Builder,
     private val deliveryProperties: DeliveryProperties,
+    private val deliveryMessageFormatter: DeliveryMessageFormatter,
 ) : OutputPlugin {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val restClient = restClientBuilder.build()
@@ -37,7 +38,7 @@ class TelegramOutputPlugin(
                     .body(
                         TelegramSendMessageRequest(
                             chatId = telegram.chatId,
-                            text = formatMessage(result),
+                            text = deliveryMessageFormatter.plainText(result),
                         ),
                     ).retrieve()
                     .body(TelegramSendMessageResponse::class.java)
@@ -69,27 +70,6 @@ class TelegramOutputPlugin(
 
         return lastResult
     }
-
-    private fun formatMessage(result: AnalysisResult): String =
-        buildString {
-            append("[Sentinel] ")
-            append(result.severity)
-            append(" incident")
-            appendLine()
-            append("Category: ")
-            append(result.category)
-            appendLine()
-            append("Summary: ")
-            append(result.summary)
-            appendLine()
-            append("Confidence: ")
-            append(String.format("%.2f", result.confidence))
-            if (result.detail.actionItems.isNotEmpty()) {
-                appendLine()
-                append("Actions: ")
-                append(result.detail.actionItems.joinToString("; "))
-            }
-        }
 }
 
 data class TelegramSendMessageRequest(

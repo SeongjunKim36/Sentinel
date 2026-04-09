@@ -10,7 +10,7 @@ The current goal is to turn the original Phase 1 MVP into a working codebase.
 
 - Source: Sentry webhook
 - Pipeline: event ingestion -> Kafka -> classification -> LLM root cause analysis -> evaluation and routing
-- Output: Slack notification, with Telegram available as the first real test delivery channel
+- Output: Slack notification, with Telegram available for fast local delivery testing
 - Infrastructure: local development with Docker Compose
 - Observability: end-to-end traceability by trace ID
 
@@ -26,6 +26,7 @@ The current bootstrap implementation already includes:
 - an `evaluation` consumer that reads `sentinel.analysis-results`
 - publication of routed results to `sentinel.routed-results`
 - a `delivery` consumer that dispatches routed results to output plugins
+- a real `SlackOutputPlugin` backed by Slack `chat.postMessage`
 - a real `TelegramOutputPlugin` for end-to-end delivery testing
 - a replaceable `LlmClient` boundary for future provider integrations
 - integration tests that verify webhook-to-Kafka, raw-to-classified, classified-to-analysis, and analysis-to-routing delivery
@@ -79,7 +80,7 @@ For internal planning and day-to-day development notes, use a local folder such 
 
 ## Telegram Test Setup
 
-Telegram is the quickest way to test real outbound delivery before the Slack client is implemented.
+Telegram is the quickest way to test real outbound delivery while the local demo flow is still being refined.
 
 1. Create a Telegram bot and collect the bot token.
 2. Get the target chat ID for the bot.
@@ -93,10 +94,22 @@ export SENTINEL_TELEGRAM_CHAT_ID=your-chat-id
 
 With those values in place, routed results will be sent to Telegram from the `delivery` stage.
 
+## Slack Setup
+
+Slack delivery uses the Web API `chat.postMessage` method with a bot token and a default channel.
+
+```bash
+export SENTINEL_DELIVERY_DEFAULT_CHANNELS=slack
+export SENTINEL_SLACK_BOT_TOKEN=xoxb-your-bot-token
+export SENTINEL_SLACK_DEFAULT_CHANNEL=C01234567
+```
+
+With those values in place, routed results will be sent to the configured Slack channel.
+
 ## Suggested Next Steps
 
 1. Introduce Redis-backed deduplication to the `classification` stage.
 2. Replace the bootstrap `LlmClient` with a real provider integration.
-3. Replace the Slack placeholder with a real delivery client.
-4. Add OpenTelemetry and end-to-end trace propagation.
-5. Add a reproducible local demo scenario that exercises the full pipeline.
+3. Add OpenTelemetry and end-to-end trace propagation.
+4. Add a reproducible local demo scenario that exercises the full pipeline.
+5. Persist delivery attempts and failures for auditability.

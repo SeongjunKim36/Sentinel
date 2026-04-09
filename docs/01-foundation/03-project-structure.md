@@ -63,6 +63,7 @@ The most important adjustment is this: do not start with top-level technical lay
 Contains shared contracts that multiple modules can depend on safely.
 
 - `Event`
+- `ClassifiedEvent`
 - `AnalysisResult`
 - `PipelineConfig`
 - plugin interfaces

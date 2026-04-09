@@ -19,7 +19,9 @@ The current bootstrap implementation already includes:
 - a real `POST /api/v1/webhooks/sentry` endpoint
 - Sentry payload normalization into the shared `Event` contract
 - publishing normalized raw events to Kafka topic `sentinel.raw-events`
-- an integration test that verifies webhook-to-Kafka delivery with embedded Kafka
+- a `classification` consumer that reads `sentinel.raw-events`
+- publication of analyzable classified events to `sentinel.classified-events`
+- integration tests that verify both webhook-to-Kafka and raw-to-classified Kafka delivery
 
 ## Current Stack
 
@@ -70,8 +72,8 @@ For internal planning and day-to-day development notes, use a local folder such 
 
 ## Suggested Next Steps
 
-1. Add the first raw-event consumer for the `classification` module.
-2. Introduce Redis-backed deduplication and publish to `sentinel.classified-events`.
-3. Implement the first real Analyzer path with an LLM client abstraction.
+1. Introduce Redis-backed deduplication to the `classification` stage.
+2. Implement the first Analyzer consumer for `sentinel.classified-events`.
+3. Add an LLM client abstraction and the first provider integration.
 4. Replace the Slack placeholder with a real delivery client.
 5. Add OpenTelemetry and end-to-end trace propagation.

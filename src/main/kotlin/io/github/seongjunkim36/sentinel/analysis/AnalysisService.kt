@@ -1,8 +1,8 @@
 package io.github.seongjunkim36.sentinel.analysis
 
-import io.github.seongjunkim36.sentinel.classification.ClassifiedEvent
 import io.github.seongjunkim36.sentinel.shared.AnalysisDetail
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
+import io.github.seongjunkim36.sentinel.shared.ClassifiedEvent
 import io.github.seongjunkim36.sentinel.shared.LlmMetadata
 import io.github.seongjunkim36.sentinel.shared.RoutingDecision
 import io.github.seongjunkim36.sentinel.shared.RoutingPriority

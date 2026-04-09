@@ -32,3 +32,11 @@ management:
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger - %msg%n"
+
+sentinel:
+  delivery:
+    default-channels: ${SENTINEL_DELIVERY_DEFAULT_CHANNELS:slack}
+    telegram:
+      api-base-url: ${SENTINEL_TELEGRAM_API_BASE_URL:https://api.telegram.org}
+      bot-token: ${SENTINEL_TELEGRAM_BOT_TOKEN:}
+      chat-id: ${SENTINEL_TELEGRAM_CHAT_ID:}

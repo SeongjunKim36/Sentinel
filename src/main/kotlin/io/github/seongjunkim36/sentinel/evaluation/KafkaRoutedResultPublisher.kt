@@ -1,4 +1,4 @@
-package io.github.seongjunkim36.sentinel.analysis
+package io.github.seongjunkim36.sentinel.evaluation
 
 import io.github.seongjunkim36.sentinel.SentinelTopics
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
@@ -9,25 +9,25 @@ import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Component
 
 @Component
-class KafkaAnalysisResultPublisher(
-    @Qualifier("analysisResultKafkaTemplate")
+class KafkaRoutedResultPublisher(
+    @Qualifier("routedResultKafkaTemplate")
     private val kafkaTemplate: KafkaTemplate<String, AnalysisResult>,
-) : AnalysisResultPublisher {
+) : RoutedResultPublisher {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     override fun publish(result: AnalysisResult) {
         val metadata = kafkaTemplate
-            .send(SentinelTopics.ANALYSIS_RESULTS, result.tenantId, result)
+            .send(SentinelTopics.ROUTED_RESULTS, result.tenantId, result)
             .get(10, TimeUnit.SECONDS)
 
         logger.info(
-            "Published analysis result to Kafka: topic={}, partition={}, offset={}, eventId={}, tenantId={}, severity={}",
-            SentinelTopics.ANALYSIS_RESULTS,
+            "Published routed result to Kafka: topic={}, partition={}, offset={}, eventId={}, tenantId={}, priority={}",
+            SentinelTopics.ROUTED_RESULTS,
             metadata.recordMetadata.partition(),
             metadata.recordMetadata.offset(),
             result.eventId,
             result.tenantId,
-            result.severity,
+            result.routing.priority,
         )
     }
 }

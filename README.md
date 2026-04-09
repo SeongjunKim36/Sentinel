@@ -10,7 +10,7 @@ The current goal is to turn the original Phase 1 MVP into a working codebase.
 
 - Source: Sentry webhook
 - Pipeline: event ingestion -> Kafka -> classification -> LLM root cause analysis -> evaluation and routing
-- Output: Slack notification
+- Output: Slack notification, with Telegram available as the first real test delivery channel
 - Infrastructure: local development with Docker Compose
 - Observability: end-to-end traceability by trace ID
 
@@ -23,8 +23,12 @@ The current bootstrap implementation already includes:
 - publication of analyzable classified events to `sentinel.classified-events`
 - an `analysis` consumer that reads `sentinel.classified-events`
 - publication of bootstrap `AnalysisResult` records to `sentinel.analysis-results`
+- an `evaluation` consumer that reads `sentinel.analysis-results`
+- publication of routed results to `sentinel.routed-results`
+- a `delivery` consumer that dispatches routed results to output plugins
+- a real `TelegramOutputPlugin` for end-to-end delivery testing
 - a replaceable `LlmClient` boundary for future provider integrations
-- integration tests that verify webhook-to-Kafka, raw-to-classified, and classified-to-analysis delivery
+- integration tests that verify webhook-to-Kafka, raw-to-classified, classified-to-analysis, and analysis-to-routing delivery
 
 ## Current Stack
 
@@ -73,10 +77,26 @@ For internal planning and day-to-day development notes, use a local folder such 
 - They can be written in Korean.
 - They are meant for temporary decisions, implementation notes, and working drafts that do not belong in the public repository.
 
+## Telegram Test Setup
+
+Telegram is the quickest way to test real outbound delivery before the Slack client is implemented.
+
+1. Create a Telegram bot and collect the bot token.
+2. Get the target chat ID for the bot.
+3. Set the delivery channel to Telegram in your local environment.
+
+```bash
+export SENTINEL_DELIVERY_DEFAULT_CHANNELS=telegram
+export SENTINEL_TELEGRAM_BOT_TOKEN=your-bot-token
+export SENTINEL_TELEGRAM_CHAT_ID=your-chat-id
+```
+
+With those values in place, routed results will be sent to Telegram from the `delivery` stage.
+
 ## Suggested Next Steps
 
 1. Introduce Redis-backed deduplication to the `classification` stage.
-2. Add the `evaluation` consumer for `sentinel.analysis-results`.
-3. Replace the bootstrap `LlmClient` with a real provider integration.
-4. Replace the Slack placeholder with a real delivery client.
-5. Add OpenTelemetry and end-to-end trace propagation.
+2. Replace the bootstrap `LlmClient` with a real provider integration.
+3. Replace the Slack placeholder with a real delivery client.
+4. Add OpenTelemetry and end-to-end trace propagation.
+5. Add a reproducible local demo scenario that exercises the full pipeline.

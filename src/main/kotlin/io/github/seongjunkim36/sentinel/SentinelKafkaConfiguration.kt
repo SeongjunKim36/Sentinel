@@ -58,6 +58,16 @@ class SentinelKafkaConfiguration {
         )
 
     @Bean
+    fun routedResultProducerFactory(
+        @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
+        jsonMapper: JsonMapper,
+    ): ProducerFactory<String, AnalysisResult> =
+        jsonProducerFactory(
+            bootstrapServers = bootstrapServers,
+            valueSerializer = JacksonJsonSerializer<AnalysisResult>(jsonMapper).noTypeInfo(),
+        )
+
+    @Bean
     fun eventConsumerFactory(
         @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
         jsonMapper: JsonMapper,
@@ -86,6 +96,18 @@ class SentinelKafkaConfiguration {
         )
 
     @Bean
+    fun analysisResultConsumerFactory(
+        @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
+        jsonMapper: JsonMapper,
+    ): ConsumerFactory<String, AnalysisResult> =
+        jsonConsumerFactory(
+            bootstrapServers = bootstrapServers,
+            valueDeserializer = JacksonJsonDeserializer(AnalysisResult::class.java, jsonMapper)
+                .trustedPackages("io.github.seongjunkim36.sentinel")
+                .ignoreTypeHeaders(),
+        )
+
+    @Bean
     fun eventKafkaTemplate(
         eventProducerFactory: ProducerFactory<String, Event>,
     ): KafkaTemplate<String, Event> = KafkaTemplate(eventProducerFactory)
@@ -101,6 +123,11 @@ class SentinelKafkaConfiguration {
     ): KafkaTemplate<String, AnalysisResult> = KafkaTemplate(analysisResultProducerFactory)
 
     @Bean
+    fun routedResultKafkaTemplate(
+        routedResultProducerFactory: ProducerFactory<String, AnalysisResult>,
+    ): KafkaTemplate<String, AnalysisResult> = KafkaTemplate(routedResultProducerFactory)
+
+    @Bean
     fun eventKafkaListenerContainerFactory(
         eventConsumerFactory: ConsumerFactory<String, Event>,
     ): ConcurrentKafkaListenerContainerFactory<String, Event> =
@@ -111,6 +138,12 @@ class SentinelKafkaConfiguration {
         classifiedEventConsumerFactory: ConsumerFactory<String, ClassifiedEvent>,
     ): ConcurrentKafkaListenerContainerFactory<String, ClassifiedEvent> =
         jsonKafkaListenerContainerFactory(classifiedEventConsumerFactory)
+
+    @Bean
+    fun analysisResultKafkaListenerContainerFactory(
+        analysisResultConsumerFactory: ConsumerFactory<String, AnalysisResult>,
+    ): ConcurrentKafkaListenerContainerFactory<String, AnalysisResult> =
+        jsonKafkaListenerContainerFactory(analysisResultConsumerFactory)
 
     @Bean
     fun sentinelTopics(): KafkaAdmin.NewTopics =

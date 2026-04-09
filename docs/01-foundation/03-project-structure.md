@@ -111,6 +111,7 @@ Turns analysis output into operational routing decisions.
 Delivers results to external channels.
 
 - output plugin registry
+- Telegram implementation for early end-to-end testing
 - Slack implementation
 - later expansion to email, dashboard, and Jira
 

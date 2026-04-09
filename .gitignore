@@ -1,0 +1,22 @@
+# Build outputs
+build/
+out/
+.gradle/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
+
+# Local-only notes and working documents
+docs-private/
+notes-private/

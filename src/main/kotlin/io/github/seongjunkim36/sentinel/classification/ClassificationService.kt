@@ -5,11 +5,21 @@ import io.github.seongjunkim36.sentinel.shared.ClassifiedEvent
 import org.springframework.stereotype.Service
 
 @Service
-class ClassificationService {
+class ClassificationService(
+    private val eventDeduplicationStore: EventDeduplicationStore,
+) {
     fun classify(event: Event): ClassifiedEvent {
         val category = categoryFor(event)
         val message = event.payload["message"]?.toString()?.trim().orEmpty()
-        val filterReason = filterReasonFor(message)
+        val initialFilterReason = filterReasonFor(message)
+        val analyzableCandidate = initialFilterReason == null && category == "error"
+        val deduplicationFilterReason =
+            if (analyzableCandidate && !eventDeduplicationStore.markIfFirstSeen(event)) {
+                "duplicate-event"
+            } else {
+                null
+            }
+        val filterReason = initialFilterReason ?: deduplicationFilterReason
 
         return ClassifiedEvent(
             event = event,
@@ -17,7 +27,14 @@ class ClassificationService {
             analyzable = filterReason == null && category == "error",
             filtered = filterReason != null,
             filterReason = filterReason,
-            tags = setOf("source:${event.sourceType}", "category:$category"),
+            tags =
+                buildSet {
+                    add("source:${event.sourceType}")
+                    add("category:$category")
+                    if (deduplicationFilterReason != null) {
+                        add("dedup:duplicate")
+                    }
+                },
         )
     }
 

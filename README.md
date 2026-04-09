@@ -20,6 +20,7 @@ The current bootstrap implementation already includes:
 - Sentry payload normalization into the shared `Event` contract
 - publishing normalized raw events to Kafka topic `sentinel.raw-events`
 - a `classification` consumer that reads `sentinel.raw-events`
+- Redis-backed duplicate suppression in `classification` by `tenantId + sourceType + sourceId`
 - publication of analyzable classified events to `sentinel.classified-events`
 - an `analysis` consumer that reads `sentinel.classified-events`
 - publication of bootstrap `AnalysisResult` records to `sentinel.analysis-results`
@@ -123,10 +124,22 @@ docker compose -f docker/compose.yml up -d
 
 The sample request body lives at `samples/sentry/checkout-timeout.json`.
 
+## Classification Deduplication
+
+Classification deduplication is enabled by default and prevents duplicate analyzable events from being sent downstream repeatedly.
+
+```bash
+export SENTINEL_CLASSIFICATION_DEDUPLICATION_ENABLED=true
+export SENTINEL_CLASSIFICATION_DEDUPLICATION_TTL=PT30M
+export SENTINEL_CLASSIFICATION_DEDUPLICATION_KEY_PREFIX=sentinel:classification:dedup
+```
+
+If Redis is unavailable, Sentinel falls back to in-memory deduplication in the running process.
+
 ## Suggested Next Steps
 
-1. Introduce Redis-backed deduplication to the `classification` stage.
-2. Replace the bootstrap `LlmClient` with a real provider integration.
-3. Add OpenTelemetry and end-to-end trace propagation.
-4. Add a reproducible local demo scenario that exercises the full pipeline.
-5. Persist delivery attempts and failures for auditability.
+1. Replace the bootstrap `LlmClient` with a real provider integration.
+2. Add OpenTelemetry and end-to-end trace propagation.
+3. Add a reproducible local demo scenario that exercises failure and retry flows.
+4. Persist delivery attempts and failures for auditability.
+5. Add a dead-letter handling and replay workflow.

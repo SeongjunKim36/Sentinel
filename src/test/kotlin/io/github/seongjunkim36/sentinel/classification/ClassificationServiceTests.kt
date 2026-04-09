@@ -6,10 +6,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class ClassificationServiceTests {
-    private val classificationService = ClassificationService()
-
     @Test
     fun `classifies sentry errors as analyzable`() {
+        val classificationService = ClassificationService(StubEventDeduplicationStore(firstSeen = true))
         val classifiedEvent = classificationService.classify(event(message = "Database timeout in checkout flow"))
 
         assertThat(classifiedEvent.category).isEqualTo("error")
@@ -20,11 +19,26 @@ class ClassificationServiceTests {
 
     @Test
     fun `filters healthcheck noise`() {
+        val deduplicationStore = StubEventDeduplicationStore(firstSeen = true)
+        val classificationService = ClassificationService(deduplicationStore)
         val classifiedEvent = classificationService.classify(event(message = "Healthcheck ping failed temporarily"))
 
         assertThat(classifiedEvent.analyzable).isFalse()
         assertThat(classifiedEvent.filtered).isTrue()
         assertThat(classifiedEvent.filterReason).isEqualTo("healthcheck-noise")
+        assertThat(deduplicationStore.invocationCount).isZero()
+    }
+
+    @Test
+    fun `filters duplicate analyzable events`() {
+        val classificationService = ClassificationService(StubEventDeduplicationStore(firstSeen = false))
+
+        val classifiedEvent = classificationService.classify(event(message = "Database timeout in checkout flow"))
+
+        assertThat(classifiedEvent.analyzable).isFalse()
+        assertThat(classifiedEvent.filtered).isTrue()
+        assertThat(classifiedEvent.filterReason).isEqualTo("duplicate-event")
+        assertThat(classifiedEvent.tags).contains("dedup:duplicate")
     }
 
     private fun event(message: String): Event =
@@ -35,4 +49,16 @@ class ClassificationServiceTests {
             payload = mapOf("message" to message),
             metadata = EventMetadata(sourceVersion = "v1"),
         )
+
+    private class StubEventDeduplicationStore(
+        private val firstSeen: Boolean,
+    ) : EventDeduplicationStore {
+        var invocationCount: Int = 0
+            private set
+
+        override fun markIfFirstSeen(event: Event): Boolean {
+            invocationCount += 1
+            return firstSeen
+        }
+    }
 }

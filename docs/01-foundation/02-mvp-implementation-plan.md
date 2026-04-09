@@ -13,7 +13,7 @@ This document focuses less on what Sentinel is and more on the order and structu
 The MVP keeps the documented feature scope intact, but simplifies the deployment model.
 
 - Deployment model: single Spring Boot application
-- Internal architecture: modular monolith
+- Internal architecture: modular monolith verified with Spring Modulith
 - Asynchronous processing: Kafka topics
 - Persistent storage: PostgreSQL and Redis
 - First integrations: Sentry and Slack
@@ -47,7 +47,7 @@ The first milestone is a runnable local environment with an extensible project s
 
 - Create the Spring Boot project
 - Use Kotlin and Gradle Kotlin DSL
-- Establish the base package layout
+- Establish the base package layout around application modules
 - Create Docker Compose for local dependencies
 - Define local runtime profiles
 
@@ -167,6 +167,7 @@ Do not split the system into many deployable services too early.
 
 - The current goal is design validation, not distributed deployment
 - Keep boundaries explicit in code so separation remains possible later
+- Use Spring Modulith verification to keep module boundaries honest from the start
 
 ### Kafka Topics
 

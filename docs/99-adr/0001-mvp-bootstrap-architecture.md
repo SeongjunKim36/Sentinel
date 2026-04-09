@@ -25,7 +25,8 @@ Phase 1 starts with the following strategy.
 3. Keep asynchronous stage boundaries on Kafka.
 4. Use Kotlin as the implementation language.
 5. Start with Spring MVC for the web layer.
-6. Introduce `SourcePlugin` and `OutputPlugin` interfaces early, but implement only Sentry and Slack first.
+6. Structure the codebase as a Spring Modulith from the start.
+7. Introduce `SourcePlugin` and `OutputPlugin` interfaces early, but implement only Sentry and Slack first.
 
 ## Rationale
 
@@ -44,7 +45,7 @@ Phase 1 starts with the following strategy.
 ### Use Kotlin
 
 - Kotlin expresses domain models, configuration objects, and serialized contracts clearly and compactly.
-- It works well with Spring Boot 3.
+- It works well with Spring Boot 4.
 - It also fits future DSL-like configuration or prompt-related code well.
 
 ### Start With Spring MVC
@@ -52,6 +53,12 @@ Phase 1 starts with the following strategy.
 - Webhook intake, management APIs, and SSE are all feasible without introducing WebFlux immediately.
 - The implementation and debugging path is simpler at the beginning.
 - Specific flows can still become reactive later if the need becomes clear.
+
+### Use Spring Modulith Early
+
+- The project is explicitly a modular monolith in its early phase.
+- Spring Modulith provides verification and documentation for those module boundaries.
+- It nudges the package layout toward business modules instead of technical buckets.
 
 ### Introduce Plugin Interfaces Early
 

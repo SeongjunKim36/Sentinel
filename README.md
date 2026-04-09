@@ -14,6 +14,21 @@ The current goal is to turn the original Phase 1 MVP into a working codebase.
 - Infrastructure: local development with Docker Compose
 - Observability: end-to-end traceability by trace ID
 
+The current bootstrap implementation already includes:
+
+- a real `POST /api/v1/webhooks/sentry` endpoint
+- Sentry payload normalization into the shared `Event` contract
+- publishing normalized raw events to Kafka topic `sentinel.raw-events`
+- an integration test that verifies webhook-to-Kafka delivery with embedded Kafka
+
+## Current Stack
+
+- Spring Boot `4.0.5`
+- Kotlin `2.2.21`
+- Gradle `9.4.1` wrapper
+- Spring Modulith `2.0.5`
+- PostgreSQL, Redis, and Kafka for local infrastructure
+
 ## Documentation
 
 - [00. Documentation Index](/Users/skl-wade/Wade/Sentinel/docs/00-docs-index.md)
@@ -55,9 +70,8 @@ For internal planning and day-to-day development notes, use a local folder such 
 
 ## Suggested Next Steps
 
-1. Bootstrap the Spring Boot application.
-2. Add Docker Compose for Kafka, PostgreSQL, and Redis.
-3. Implement the Sentry webhook endpoint and raw event publishing.
-4. Connect the Classifier, Analyzer, and Evaluator pipeline stages.
-5. Add Slack output delivery.
-6. Add OpenTelemetry and metrics.
+1. Add the first raw-event consumer for the `classification` module.
+2. Introduce Redis-backed deduplication and publish to `sentinel.classified-events`.
+3. Implement the first real Analyzer path with an LLM client abstraction.
+4. Replace the Slack placeholder with a real delivery client.
+5. Add OpenTelemetry and end-to-end trace propagation.

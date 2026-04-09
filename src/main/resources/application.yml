@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: sentinel
+  datasource:
+    url: ${SENTINEL_POSTGRES_URL:jdbc:postgresql://localhost:5432/sentinel}
+    username: ${SENTINEL_POSTGRES_USERNAME:sentinel}
+    password: ${SENTINEL_POSTGRES_PASSWORD:sentinel}
+  data:
+    redis:
+      host: ${SENTINEL_REDIS_HOST:localhost}
+      port: ${SENTINEL_REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${SENTINEL_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    admin:
+      auto-create: true
+    consumer:
+      auto-offset-reset: earliest
+      group-id: sentinel-bootstrap
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        "[spring.json.add.type.headers]": false
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger - %msg%n"

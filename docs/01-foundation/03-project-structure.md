@@ -7,16 +7,17 @@ Sentinel currently starts from planning documents only, which makes it especiall
 Recommended baseline:
 
 - Language: Kotlin
-- Framework: Spring Boot 3.x
+- Framework: Spring Boot 4.x
 - Build tool: Gradle Kotlin DSL
 - Architecture style: modular monolith
-- Package strategy: feature boundaries plus shared platform concerns
+- Module strategy: direct application modules under the root package, aligned with Spring Modulith
 
 ## Why This Structure Fits Sentinel
 
 - The project has significant architectural complexity, but the first milestone must still be a fast end-to-end vertical slice.
 - A single Spring Boot app can host webhook intake, Kafka consumers, SSE, metrics, and persistence without unnecessary operational overhead.
 - Kotlin keeps domain models, config objects, and API contracts concise.
+- Spring Modulith gives the project structural verification and module-level documentation from day one.
 - The structure remains flexible enough to split plugins or pipeline stages later.
 
 ## Recommended Directory Layout
@@ -27,164 +28,113 @@ sentinel/
 ├── docs/
 ├── docker/
 │   ├── compose.yml
-│   ├── grafana/
-│   └── prometheus/
+│   └── ...
+├── gradle/
+│   └── wrapper/
+├── gradlew
+├── gradlew.bat
 ├── src/
 │   ├── main/
-│   │   ├── kotlin/com/sentinel/
+│   │   ├── kotlin/io/github/seongjunkim36/sentinel/
 │   │   │   ├── SentinelApplication.kt
-│   │   │   ├── common/
-│   │   │   │   ├── config/
-│   │   │   │   ├── errors/
-│   │   │   │   ├── tracing/
-│   │   │   │   └── util/
-│   │   │   ├── domain/
-│   │   │   │   ├── event/
-│   │   │   │   ├── analysis/
-│   │   │   │   ├── pipeline/
-│   │   │   │   └── prompt/
+│   │   │   ├── SentinelTopics.kt
+│   │   │   ├── shared/
 │   │   │   ├── ingestion/
 │   │   │   │   ├── api/
-│   │   │   │   ├── application/
-│   │   │   │   └── plugin/
-│   │   │   ├── classifier/
-│   │   │   │   ├── application/
-│   │   │   │   ├── consumer/
-│   │   │   │   └── support/
-│   │   │   ├── analyzer/
-│   │   │   │   ├── application/
-│   │   │   │   ├── llm/
-│   │   │   │   ├── prompt/
-│   │   │   │   └── consumer/
-│   │   │   ├── evaluator/
-│   │   │   │   ├── application/
-│   │   │   │   ├── consumer/
-│   │   │   │   └── routing/
-│   │   │   ├── output/
-│   │   │   │   ├── application/
-│   │   │   │   ├── plugin/
-│   │   │   │   └── slack/
-│   │   │   ├── persistence/
-│   │   │   │   ├── postgres/
-│   │   │   │   └── redis/
-│   │   │   ├── messaging/
-│   │   │   │   ├── kafka/
-│   │   │   │   └── dlq/
-│   │   │   ├── observability/
-│   │   │   │   ├── metrics/
-│   │   │   │   └── telemetry/
-│   │   │   └── api/
-│   │   │       ├── results/
-│   │   │       ├── pipelines/
-│   │   │       └── prompts/
+│   │   │   │   └── application/
+│   │   │   ├── classification/
+│   │   │   ├── analysis/
+│   │   │   ├── evaluation/
+│   │   │   └── delivery/
 │   │   └── resources/
 │   │       ├── application.yml
-│   │       ├── db/migration/
-│   │       └── prompts/
+│   │       └── db/migration/
 │   └── test/
-│       ├── kotlin/com/sentinel/
-│       └── resources/
+│       └── kotlin/io/github/seongjunkim36/sentinel/
 └── build.gradle.kts
 ```
 
-## Package Responsibilities
+## Module Responsibilities
 
-### `domain`
+The most important adjustment is this: do not start with top-level technical layers such as `messaging`, `persistence`, and `observability` as peer packages. Spring Modulith works best when the root package contains application modules, not technical buckets.
 
-Contains the core models and contracts of the platform.
+### `shared`
+
+Contains shared contracts that multiple modules can depend on safely.
 
 - `Event`
 - `AnalysisResult`
 - `PipelineConfig`
 - plugin interfaces
-- repository contracts
+- enums and delivery contracts
 
 ### `ingestion`
 
-Responsible for converting external payloads into standardized internal events.
+Owns webhook intake and source normalization.
 
 - webhook controller
-- source plugin registry
-- normalization service
-- raw event publisher
+- source plugin implementations
+- intake service
+- raw event publishing boundary
 
-### `classifier`
+### `classification`
 
-Handles lightweight decisions before any LLM call.
+Handles lightweight pre-LLM event decisions.
 
 - deduplication
 - exclusion rules
-- analyzability checks
-- classification tags
+- category tags
+- analyzability decisions
 
-### `analyzer`
+### `analysis`
 
-Owns LLM invocation and analysis result generation.
+Owns LLM-based enrichment and structured result creation.
 
-- prompt selection
+- prompt loading
 - provider calls
-- response parsing
-- cost, token, and latency recording
+- parsing
+- cost and latency capture
 
-### `evaluator`
+### `evaluation`
 
-Turns analysis output into operationally useful signals.
+Turns analysis output into operational routing decisions.
 
-- severity classification
 - confidence scoring
-- routing priority decisions
-- duplicate insight suppression
+- severity decisions
+- routing priority
+- duplicate suppression
 
-### `output`
+### `delivery`
 
-Delivers analysis results to external destinations.
+Delivers results to external channels.
 
 - output plugin registry
 - Slack implementation
 - later expansion to email, dashboard, and Jira
 
-### `messaging`
-
-Encapsulates Kafka producer and consumer logic, plus DLQ behavior.
-
-- topic definitions
-- serializers and deserializers
-- shared publish helpers
-- retry and dead letter handling
-
-### `observability`
-
-Owns metrics, tracing, and structured operational visibility.
-
-- OpenTelemetry
-- Micrometer
-- structured logging
-
 ## Boundary Rules
 
-There is no need to start with a multi-module Gradle build. Strict package boundaries matter more.
+There is no need to start with a multi-module Gradle build. Strict module boundaries matter more.
 
-- `domain` should not depend directly on infrastructure implementations
-- plugin interfaces should live in domain or application-level contracts
-- Kafka, Redis, and PostgreSQL details should be hidden behind `messaging` and `persistence`
+- application modules should be direct subpackages of the root package
+- shared contracts should live in `shared`
+- infrastructure details should sit inside the module that owns them
 - controllers should orchestrate requests, not contain business rules
+- module boundaries should be verified with Spring Modulith tests
 
 ## Minimum Packages For Phase 1
 
 The initial implementation does not need every package filled out. These are enough to start.
 
 ```text
-com/sentinel/
+io/github/seongjunkim36/sentinel/
 ├── SentinelApplication.kt
-├── domain/
+├── shared/
 ├── ingestion/
-├── classifier/
-├── analyzer/
-├── evaluator/
-├── output/slack/
-├── messaging/kafka/
-├── persistence/redis/
-└── observability/
+├── classification/
+├── analysis/
+├── evaluation/
+└── delivery/
 ```
 
 ## Environment Files Needed Early
@@ -192,8 +142,7 @@ com/sentinel/
 - `docker/compose.yml`
 - `.env.example`
 - `src/main/resources/application.yml`
-- `src/main/resources/application-local.yml`
-- `src/main/resources/db/migration/V1__init.sql`
+- `src/main/resources/db/migration/V1__bootstrap.sql`
 
 ## Testing Strategy
 
@@ -202,6 +151,7 @@ The test suite should be layered from the beginning.
 - Unit tests: classifier rules, evaluator scoring, payload normalization
 - Integration tests: webhook to Kafka publishing, Kafka consumer to persistence
 - Contract tests: Sentry normalization, Slack message rendering
+- Modulith verification tests: application module boundary checks
 - End-to-end tests: local scenarios backed by Docker Compose
 
 ## Immediate Implementation Units

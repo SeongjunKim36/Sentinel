@@ -44,6 +44,12 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [traceId=%X{traceId:-},spanId=%X{spanId:-}] %logger - %msg%n"
 
 sentinel:
+  ingestion:
+    webhook:
+      sentry:
+        signature-validation-enabled: ${SENTINEL_SENTRY_WEBHOOK_SIGNATURE_VALIDATION_ENABLED:false}
+        secret: ${SENTINEL_SENTRY_WEBHOOK_SECRET:}
+        max-timestamp-skew: ${SENTINEL_SENTRY_WEBHOOK_MAX_TIMESTAMP_SKEW:PT5M}
   analysis:
     llm:
       provider: ${SENTINEL_ANALYSIS_LLM_PROVIDER:bootstrap}

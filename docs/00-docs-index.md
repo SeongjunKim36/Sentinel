@@ -21,6 +21,7 @@ Domain-level behavior and contract semantics are documented here.
 Operational runbooks, alerting standards, and observability definitions live here.
 
 - [31. Replay Recovery SLO and Alerting](/Users/skl-wade/Wade/Sentinel/docs/30-operations/31-replay-recovery-slo-alerting.md)
+- [32. Webhook Signature Security Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/32-webhook-signature-security-baseline.md)
 
 ## 99. ADR
 
@@ -58,4 +59,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: Prometheus + Grafana local dashboard provisioning for stage metrics and replay-failure-alert MTTR
 - Done: Prometheus alerting rules and replay recovery SLO thresholds
 - Done: prompt/template externalization with versioned rollout controls
-- Next: source webhook signature validation and secret-hardening baseline
+- Done: source webhook signature validation and secret-hardening baseline
+- Next: routing policy and channel-mapping externalization

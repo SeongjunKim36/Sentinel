@@ -117,6 +117,20 @@ export SENTINEL_SLACK_DEFAULT_CHANNEL=C01234567
 
 With those values in place, routed results will be sent to the configured Slack channel.
 
+## Sentry Webhook Signature Validation
+
+Sentinel can validate Sentry webhook signatures before accepting payloads.
+
+```bash
+export SENTINEL_SENTRY_WEBHOOK_SIGNATURE_VALIDATION_ENABLED=true
+export SENTINEL_SENTRY_WEBHOOK_SECRET=your-sentry-client-secret
+export SENTINEL_SENTRY_WEBHOOK_MAX_TIMESTAMP_SKEW=PT5M
+```
+
+When enabled, requests missing valid `Sentry-Hook-Signature` or acceptable `Sentry-Hook-Timestamp` are rejected with HTTP `401`.
+
+For local bootstrap flows, validation is disabled by default.
+
 ## LLM Provider Setup
 
 The analysis module supports `bootstrap` and `openai` provider modes.

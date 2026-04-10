@@ -34,6 +34,7 @@ The current bootstrap implementation already includes:
 - persistence of every delivery attempt (success/failure) to PostgreSQL for auditability
 - dead-letter persistence and Kafka publication for failed delivery attempts
 - replay API for dead-letter events back into the routed-results topic
+- switchable LLM provider mode (`bootstrap` or `openai`)
 - a real `SlackOutputPlugin` backed by Slack `chat.postMessage`
 - a real `TelegramOutputPlugin` for end-to-end delivery testing
 - a replaceable `LlmClient` boundary for future provider integrations
@@ -114,6 +115,30 @@ export SENTINEL_SLACK_DEFAULT_CHANNEL=C01234567
 ```
 
 With those values in place, routed results will be sent to the configured Slack channel.
+
+## LLM Provider Setup
+
+The analysis module supports `bootstrap` and `openai` provider modes.
+
+```bash
+export SENTINEL_ANALYSIS_LLM_PROVIDER=bootstrap
+```
+
+To use OpenAI for real analysis calls:
+
+```bash
+export SENTINEL_ANALYSIS_LLM_PROVIDER=openai
+export SENTINEL_OPENAI_API_KEY=your-api-key
+export SENTINEL_OPENAI_MODEL=gpt-4.1-mini
+export SENTINEL_ANALYSIS_LLM_PROMPT_VERSION=openai-v1
+```
+
+Optional tuning:
+
+```bash
+export SENTINEL_OPENAI_API_BASE_URL=https://api.openai.com
+export SENTINEL_OPENAI_TEMPERATURE=0.2
+```
 
 ## Local Demo
 
@@ -233,6 +258,6 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 
 ## Suggested Next Steps
 
-1. Replace the bootstrap `LlmClient` with a real provider integration.
-2. Add stage-level custom business metrics dashboards (ingestion/filtering/delivery outcomes).
-3. Add dedicated dashboards for replay-failure-alert frequency and mean time to recovery.
+1. Add stage-level custom business metrics dashboards (ingestion/filtering/delivery outcomes).
+2. Add dedicated dashboards for replay-failure-alert frequency and mean time to recovery.
+3. Externalize prompts/templates with versioned storage and rollout strategy.

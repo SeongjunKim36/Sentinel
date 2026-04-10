@@ -45,6 +45,14 @@ logging:
 
 sentinel:
   analysis:
+    llm:
+      provider: ${SENTINEL_ANALYSIS_LLM_PROVIDER:bootstrap}
+      prompt-version: ${SENTINEL_ANALYSIS_LLM_PROMPT_VERSION:openai-v1}
+      openai:
+        api-base-url: ${SENTINEL_OPENAI_API_BASE_URL:https://api.openai.com}
+        api-key: ${SENTINEL_OPENAI_API_KEY:}
+        model: ${SENTINEL_OPENAI_MODEL:gpt-4.1-mini}
+        temperature: ${SENTINEL_OPENAI_TEMPERATURE:0.2}
     retry:
       max-attempts: ${SENTINEL_ANALYSIS_RETRY_MAX_ATTEMPTS:3}
       initial-backoff: ${SENTINEL_ANALYSIS_RETRY_INITIAL_BACKOFF:PT0.2S}

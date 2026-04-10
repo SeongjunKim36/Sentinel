@@ -3,9 +3,16 @@ package io.github.seongjunkim36.sentinel.analysis
 import io.github.seongjunkim36.sentinel.shared.ClassifiedEvent
 import io.github.seongjunkim36.sentinel.shared.Severity
 import io.github.seongjunkim36.sentinel.shared.TokenUsage
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 
 @Component
+@ConditionalOnProperty(
+    prefix = "sentinel.analysis.llm",
+    name = ["provider"],
+    havingValue = "bootstrap",
+    matchIfMissing = true,
+)
 class BootstrapLlmClient : LlmClient {
     override fun analyze(classifiedEvent: ClassifiedEvent): LlmAnalysisResponse {
         val message = classifiedEvent.event.payload["message"]?.toString()?.trim().orEmpty()

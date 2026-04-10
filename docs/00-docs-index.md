@@ -34,3 +34,14 @@ Working notes that should not be published can be kept in `docs-private/` or `no
 - Those folders are intentionally ignored by Git.
 - Korean notes are welcome there.
 - They should not be referenced from public documentation.
+
+## Current Execution Status
+
+The public MVP implementation is being delivered in numbered, reviewable units.
+
+- Done: end-to-end pipeline (webhook -> Kafka -> classification -> analysis -> evaluation -> delivery)
+- Done: delivery attempt audit + dead-letter persistence + replay workflow
+- Done: replay guardrails, replay audit trail endpoint, and replay failure threshold alerts
+- Done: switchable LLM provider mode (`bootstrap` and `openai`)
+- Next: operational dashboards for stage metrics and replay-failure-alert MTTR tracking
+- Next: prompt/template externalization with versioned rollout controls

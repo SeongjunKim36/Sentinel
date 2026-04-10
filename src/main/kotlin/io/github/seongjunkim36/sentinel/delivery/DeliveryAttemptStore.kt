@@ -57,4 +57,10 @@ data class DeliveryAttemptQuery(
     val channel: String? = null,
     val success: Boolean? = null,
     val limit: Int = 50,
+    val cursor: DeliveryAttemptCursor? = null,
+)
+
+data class DeliveryAttemptCursor(
+    val attemptedAt: Instant,
+    val id: Long,
 )

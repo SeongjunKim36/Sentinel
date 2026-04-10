@@ -289,9 +289,10 @@ The rule loader is configured in:
 
 Sentinel persists each channel delivery attempt (including failures and plugin-missing cases) in PostgreSQL table `delivery_attempt`.
 
-- Flyway migration: `V2__delivery_attempts.sql`
+- Flyway migrations: `V2__delivery_attempts.sql`, `V7__delivery_attempt_pagination_indexes.sql`
 - Query endpoint: `GET /api/v1/delivery-attempts`
 - Supported filters: `eventId`, `tenantId`, `channel`, `success`, `limit`
+- Cursor pagination: request `cursor`, response `{ "items": [...], "page": { "limit": n, "hasMore": bool, "nextCursor": "..." } }`
 
 ## Delivery Readiness
 

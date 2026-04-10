@@ -72,7 +72,14 @@ class JdbcDeliveryAttemptStore(
                     args += it
                 }
 
-                append(" order by attempted_at desc limit ?")
+                query.cursor?.let {
+                    append(" and (attempted_at < ? or (attempted_at = ? and id < ?))")
+                    args += Timestamp.from(it.attemptedAt)
+                    args += Timestamp.from(it.attemptedAt)
+                    args += it.id
+                }
+
+                append(" order by attempted_at desc, id desc limit ?")
                 args += limit
             }
 

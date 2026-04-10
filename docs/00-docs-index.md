@@ -26,6 +26,7 @@ Operational runbooks, alerting standards, and observability definitions live her
 - [33. Replay API Authorization and Hardening](/Users/skl-wade/Wade/Sentinel/docs/30-operations/33-replay-api-authorization-and-hardening.md)
 - [34. Delivery Plugin Readiness](/Users/skl-wade/Wade/Sentinel/docs/30-operations/34-delivery-plugin-readiness.md)
 - [35. Dead-Letter Tenant Scope and Pagination Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/35-dead-letter-tenant-scope-and-pagination.md)
+- [36. Delivery-Attempt Pagination Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/36-delivery-attempt-pagination-contract.md)
 
 ## 99. ADR
 
@@ -68,4 +69,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: replay operation authorization and API hardening
 - Done: delivery plugin health endpoint and readiness checks
 - Done: dead-letter tenant scoping and API pagination contract hardening
-- Next: delivery-attempt query pagination contract alignment
+- Done: delivery-attempt query pagination contract alignment
+- Next: delivery-attempt tenant scope enforcement baseline

@@ -4,21 +4,24 @@ import java.time.Instant
 import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 
 class DeliveryAttemptQueryControllerTests {
     @Test
-    fun `delegates query parameters to delivery attempt store`() {
+    fun `delegates normalized query parameters to delivery attempt store and returns page contract`() {
         val store = RecordingStore()
         val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
-        val eventId = UUID.randomUUID()
+        val eventId = store.firstEventId
 
-        val records =
+        val response =
             controller.findRecent(
                 eventId = eventId,
-                tenantId = "tenant-alpha",
-                channel = "telegram",
-                success = false,
+                tenantId = " tenant-alpha ",
+                channel = " telegram ",
+                success = true,
                 limit = 25,
+                cursor = null,
             )
 
         assertThat(store.lastQuery).isEqualTo(
@@ -26,15 +29,104 @@ class DeliveryAttemptQueryControllerTests {
                 eventId = eventId,
                 tenantId = "tenant-alpha",
                 channel = "telegram",
-                success = false,
-                limit = 25,
+                success = true,
+                limit = 26,
+                cursor = null,
             ),
         )
-        assertThat(records).hasSize(1)
-        assertThat(records.single().eventId).isEqualTo(eventId)
+        assertThat(response.items).hasSize(1)
+        assertThat(response.page.limit).isEqualTo(25)
+        assertThat(response.page.hasMore).isFalse()
+        assertThat(response.page.nextCursor).isNull()
+        assertThat(response.items.single().eventId).isEqualTo(eventId)
+    }
+
+    @Test
+    fun `returns hasMore with cursor and fetches next page`() {
+        val store = RecordingStore()
+        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+
+        val first =
+            controller.findRecent(
+                eventId = null,
+                tenantId = "tenant-alpha",
+                channel = null,
+                success = null,
+                limit = 1,
+                cursor = null,
+            )
+
+        assertThat(first.items).hasSize(1)
+        assertThat(first.page.hasMore).isTrue()
+        assertThat(first.page.nextCursor).isNotBlank()
+
+        val second =
+            controller.findRecent(
+                eventId = null,
+                tenantId = "tenant-alpha",
+                channel = null,
+                success = null,
+                limit = 1,
+                cursor = first.page.nextCursor,
+            )
+
+        assertThat(second.items).hasSize(1)
+        assertThat(second.page.hasMore).isFalse()
+        assertThat(second.page.nextCursor).isNull()
+        assertThat(store.lastQuery!!.cursor).isNotNull()
+    }
+
+    @Test
+    fun `rejects invalid cursor`() {
+        val store = RecordingStore()
+        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+
+        val exception =
+            kotlin.runCatching {
+                controller.findRecent(
+                    eventId = null,
+                    tenantId = null,
+                    channel = null,
+                    success = null,
+                    limit = 50,
+                    cursor = "invalid-cursor",
+                )
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(ResponseStatusException::class.java)
+        assertThat((exception as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
     }
 
     private class RecordingStore : DeliveryAttemptStore {
+        val firstEventId = UUID.randomUUID()
+        private val secondEventId = UUID.randomUUID()
+
+        private val records =
+            listOf(
+                DeliveryAttemptRecord(
+                    id = 2L,
+                    analysisResultId = UUID.randomUUID(),
+                    eventId = firstEventId,
+                    tenantId = "tenant-alpha",
+                    channel = "telegram",
+                    success = true,
+                    externalId = null,
+                    message = "newest",
+                    attemptedAt = Instant.parse("2026-04-01T00:10:00Z"),
+                ),
+                DeliveryAttemptRecord(
+                    id = 1L,
+                    analysisResultId = UUID.randomUUID(),
+                    eventId = secondEventId,
+                    tenantId = "tenant-alpha",
+                    channel = "telegram",
+                    success = false,
+                    externalId = null,
+                    message = "older",
+                    attemptedAt = Instant.parse("2026-04-01T00:05:00Z"),
+                ),
+            )
+
         var lastQuery: DeliveryAttemptQuery? = null
 
         override fun record(attempt: DeliveryAttemptWrite) {
@@ -43,19 +135,23 @@ class DeliveryAttemptQueryControllerTests {
         override fun findRecent(query: DeliveryAttemptQuery): List<DeliveryAttemptRecord> {
             lastQuery = query
 
-            return listOf(
-                DeliveryAttemptRecord(
-                    id = 1L,
-                    analysisResultId = UUID.randomUUID(),
-                    eventId = query.eventId ?: UUID.randomUUID(),
-                    tenantId = query.tenantId ?: "tenant-alpha",
-                    channel = query.channel ?: "telegram",
-                    success = query.success ?: true,
-                    externalId = null,
-                    message = "sample",
-                    attemptedAt = Instant.now(),
-                ),
-            )
+            val filtered =
+                records
+                    .asSequence()
+                    .filter { record -> query.eventId == null || record.eventId == query.eventId }
+                    .filter { record -> query.tenantId == null || record.tenantId == query.tenantId }
+                    .filter { record -> query.channel == null || record.channel == query.channel }
+                    .filter { record -> query.success == null || record.success == query.success }
+                    .let { sequence ->
+                        query.cursor?.let { cursor ->
+                            sequence.filter { record ->
+                                record.attemptedAt.isBefore(cursor.attemptedAt) ||
+                                    (record.attemptedAt == cursor.attemptedAt && record.id < cursor.id)
+                            }
+                        } ?: sequence
+                    }.toList()
+
+            return filtered.take(query.limit.coerceAtLeast(1))
         }
     }
 }

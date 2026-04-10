@@ -40,7 +40,9 @@ object PipelineMetrics {
     }
 
     fun recordDeliveryAttempt(
+        tenantId: String,
         channel: String,
+        category: String,
         success: Boolean,
         failureType: String = "none",
     ) {
@@ -48,7 +50,9 @@ object PipelineMetrics {
             .counter(
                 DELIVERY_ATTEMPTS,
                 listOf(
+                    Tag.of("tenant_id", tenantId),
                     Tag.of("channel", channel),
+                    Tag.of("category", category),
                     Tag.of("outcome", if (success) "success" else "failure"),
                     Tag.of("failure_type", if (success) "none" else failureType),
                 ),

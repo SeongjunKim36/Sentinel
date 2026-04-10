@@ -94,9 +94,16 @@ class PipelineMetricsTests {
     @Test
     fun `records delivery attempts and fanout summary`() {
         PipelineMetrics.recordDeliveryFanout(2)
-        PipelineMetrics.recordDeliveryAttempt(channel = "slack", success = true)
         PipelineMetrics.recordDeliveryAttempt(
+            tenantId = "tenant-alpha",
+            channel = "slack",
+            category = "error",
+            success = true,
+        )
+        PipelineMetrics.recordDeliveryAttempt(
+            tenantId = "tenant-alpha",
             channel = "telegram",
+            category = "replay-failure-alert",
             success = false,
             failureType = "plugin_missing",
         )
@@ -107,6 +114,10 @@ class PipelineMetricsTests {
                 .tags(
                     "channel",
                     "slack",
+                    "tenant_id",
+                    "tenant-alpha",
+                    "category",
+                    "error",
                     "outcome",
                     "success",
                     "failure_type",
@@ -119,6 +130,10 @@ class PipelineMetricsTests {
                 .tags(
                     "channel",
                     "telegram",
+                    "tenant_id",
+                    "tenant-alpha",
+                    "category",
+                    "replay-failure-alert",
                     "outcome",
                     "failure",
                     "failure_type",

@@ -47,6 +47,7 @@ The current bootstrap implementation already includes:
 - Gradle `9.4.1` wrapper
 - Spring Modulith `2.0.5`
 - OpenTelemetry (Micrometer tracing bridge + OTLP exporter)
+- Prometheus + Grafana dashboard provisioning for local operations visibility
 - PostgreSQL, Redis, Kafka, and Jaeger for local infrastructure
 
 ## Documentation
@@ -156,6 +157,11 @@ docker compose -f docker/compose.yml up -d
 ```
 
 The sample request body lives at `samples/sentry/checkout-timeout.json`.
+Local observability endpoints from Docker Compose:
+
+- Jaeger: `http://localhost:16686`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000` (`admin` / `sentinel`)
 
 ## OpenTelemetry Tracing
 
@@ -178,6 +184,8 @@ Sentinel now emits stage-level business metrics for ingestion, classification fi
 - `sentinel.pipeline.classification.events` with tags `category`, `outcome`, `filter_reason`
 - `sentinel.pipeline.delivery.attempts` with tags `channel`, `outcome`, `failure_type`
 - `sentinel.pipeline.delivery.fanout` summary for number of target channels per routed result
+- `sentinel.deadletter.replay.events` counter tagged by `tenant_id`, `channel`, and replay `outcome`
+- `sentinel.deadletter.replay.mttr.seconds` summary for replay recovery MTTR per tenant/channel
 
 Example PromQL panels:
 
@@ -187,6 +195,23 @@ sum by (outcome, filter_reason) (rate(sentinel_pipeline_classification_events_to
 sum by (channel, outcome, failure_type) (rate(sentinel_pipeline_delivery_attempts_total[5m]))
 sum(rate(sentinel_pipeline_delivery_fanout_sum[5m])) / sum(rate(sentinel_pipeline_delivery_fanout_count[5m]))
 ```
+
+## Grafana Dashboard
+
+When Docker Compose is running, Grafana auto-loads `Sentinel Operations Overview`.
+
+- Dashboard file: `docker/grafana/dashboards/01-sentinel-operations-overview.json`
+- Provisioning files:
+  - `docker/grafana/provisioning/datasources/datasource.yml`
+  - `docker/grafana/provisioning/dashboards/provider.yml`
+- Prometheus scrape config: `docker/prometheus/prometheus.yml`
+
+The dashboard includes:
+
+- stage throughput and classification outcome trends
+- delivery attempts by tenant/channel/category/outcome
+- replay outcomes and replay failure alert delivery frequency
+- replay recovery MTTR by tenant/channel
 
 ## Delivery Attempt Audit
 
@@ -258,6 +283,6 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 
 ## Suggested Next Steps
 
-1. Add stage-level custom business metrics dashboards (ingestion/filtering/delivery outcomes).
-2. Add dedicated dashboards for replay-failure-alert frequency and mean time to recovery.
-3. Externalize prompts/templates with versioned storage and rollout strategy.
+1. Add Prometheus alerting rules for sustained replay failures and MTTR SLO breach.
+2. Externalize prompts/templates with versioned storage and rollout strategy.
+3. Add OpenAI provider integration tests with mock HTTP server and failure scenarios.

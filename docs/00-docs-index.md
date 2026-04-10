@@ -43,5 +43,6 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: delivery attempt audit + dead-letter persistence + replay workflow
 - Done: replay guardrails, replay audit trail endpoint, and replay failure threshold alerts
 - Done: switchable LLM provider mode (`bootstrap` and `openai`)
-- Next: operational dashboards for stage metrics and replay-failure-alert MTTR tracking
+- Done: Prometheus + Grafana local dashboard provisioning for stage metrics and replay-failure-alert MTTR
+- Next: Prometheus alerting rules and SLO thresholds for replay recovery
 - Next: prompt/template externalization with versioned rollout controls

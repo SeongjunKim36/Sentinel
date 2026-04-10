@@ -46,7 +46,9 @@ class RoutedResultDeliveryConsumer(
                     ),
                 )
                 PipelineMetrics.recordDeliveryAttempt(
+                    tenantId = result.tenantId,
                     channel = channel,
+                    category = result.category,
                     success = false,
                     failureType = "plugin_missing",
                 )
@@ -88,7 +90,9 @@ class RoutedResultDeliveryConsumer(
                 )
             }
             PipelineMetrics.recordDeliveryAttempt(
+                tenantId = result.tenantId,
                 channel = channel,
+                category = result.category,
                 success = deliveryResult.success,
                 failureType = failureType,
             )

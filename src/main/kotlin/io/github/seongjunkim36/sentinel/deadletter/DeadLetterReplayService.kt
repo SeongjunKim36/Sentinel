@@ -37,21 +37,23 @@ class DeadLetterReplayService(
 
         if (replayProperties.requireOperatorNote && normalizedOperatorNote == null) {
             return saveAuditAndBuildResult(
-                id = id,
+                record = record,
                 status = record.status,
                 outcome = DeadLetterReplayOutcome.REPLAY_BLOCKED,
                 message = "Replay requires an operator note",
                 operatorNote = normalizedOperatorNote,
+                occurredAt = now,
             )
         }
 
         if (record.replayCount >= maxReplayAttempts) {
             return saveAuditAndBuildResult(
-                id = id,
+                record = record,
                 status = record.status,
                 outcome = DeadLetterReplayOutcome.REPLAY_BLOCKED,
                 message = "Replay blocked: max replay attempts reached ($maxReplayAttempts)",
                 operatorNote = normalizedOperatorNote,
+                occurredAt = now,
             )
         }
 
@@ -59,11 +61,12 @@ class DeadLetterReplayService(
         if (nextReplayAt != null && nextReplayAt.isAfter(now)) {
             val remainingSeconds = Duration.between(now, nextReplayAt).seconds.coerceAtLeast(1)
             return saveAuditAndBuildResult(
-                id = id,
+                record = record,
                 status = record.status,
                 outcome = DeadLetterReplayOutcome.REPLAY_BLOCKED,
                 message = "Replay blocked: cooldown active for ${remainingSeconds}s",
                 operatorNote = normalizedOperatorNote,
+                occurredAt = now,
             )
         }
 
@@ -78,11 +81,12 @@ class DeadLetterReplayService(
                         operatorNote = normalizedOperatorNote,
                     )
                     saveAuditAndBuildResult(
-                        id = id,
+                        record = record,
                         status = DeadLetterStatus.REPLAYED,
                         outcome = DeadLetterReplayOutcome.REPLAYED,
                         message = "Replay published to routed results topic",
                         operatorNote = normalizedOperatorNote,
+                        occurredAt = now,
                     )
                 }
             }
@@ -97,11 +101,12 @@ class DeadLetterReplayService(
 
             val replayResult =
                 saveAuditAndBuildResult(
-                    id = id,
+                    record = record,
                     status = DeadLetterStatus.REPLAY_FAILED,
                     outcome = DeadLetterReplayOutcome.REPLAY_FAILED,
                     message = errorMessage,
                     operatorNote = normalizedOperatorNote,
+                    occurredAt = now,
                 )
 
             maybePublishReplayFailureAlert(
@@ -197,24 +202,30 @@ class DeadLetterReplayService(
     }
 
     private fun saveAuditAndBuildResult(
-        id: UUID,
+        record: DeadLetterRecord,
         status: DeadLetterStatus,
         outcome: DeadLetterReplayOutcome,
         message: String,
         operatorNote: String?,
+        occurredAt: Instant = Instant.now(),
     ): DeadLetterReplayResult {
         deadLetterReplayAuditStore.save(
             DeadLetterReplayAuditWrite(
-                deadLetterId = id,
+                deadLetterId = record.id,
                 outcome = outcome,
                 status = status,
                 message = message,
                 operatorNote = operatorNote,
             ),
         )
+        DeadLetterReplayMetrics.recordReplayOutcome(
+            record = record,
+            outcome = outcome,
+            occurredAt = occurredAt,
+        )
 
         return DeadLetterReplayResult(
-            id = id,
+            id = record.id,
             replayed = outcome == DeadLetterReplayOutcome.REPLAYED,
             status = status,
             outcome = outcome,

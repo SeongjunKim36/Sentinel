@@ -2,6 +2,7 @@ package io.github.seongjunkim36.sentinel.delivery
 
 import io.github.seongjunkim36.sentinel.SentinelTopics
 import io.github.seongjunkim36.sentinel.deadletter.DeadLetterRecorder
+import io.github.seongjunkim36.sentinel.observability.PipelineMetrics
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
 import io.github.seongjunkim36.sentinel.shared.DeliveryResult
 import org.slf4j.LoggerFactory
@@ -23,7 +24,10 @@ class RoutedResultDeliveryConsumer(
         containerFactory = "analysisResultKafkaListenerContainerFactory",
     )
     fun consume(result: AnalysisResult) {
-        result.routing.channels.distinct().forEach { channel ->
+        val channels = result.routing.channels.distinct()
+        PipelineMetrics.recordDeliveryFanout(channels.size)
+
+        channels.forEach { channel ->
             val plugin = outputPluginRegistry.find(channel)
 
             if (plugin == null) {
@@ -41,9 +45,15 @@ class RoutedResultDeliveryConsumer(
                         deliveryResult = DeliveryResult(success = false, message = message),
                     ),
                 )
+                PipelineMetrics.recordDeliveryAttempt(
+                    channel = channel,
+                    success = false,
+                    failureType = "plugin_missing",
+                )
                 return@forEach
             }
 
+            var failureType = "none"
             val deliveryResult =
                 try {
                     plugin.send(result)
@@ -54,8 +64,13 @@ class RoutedResultDeliveryConsumer(
                         channel,
                         exception,
                     )
+                    failureType = "plugin_exception"
                     DeliveryResult(success = false, message = exception.message ?: exception.javaClass.simpleName)
                 }
+
+            if (!deliveryResult.success && failureType == "none") {
+                failureType = "delivery_failed"
+            }
 
             deliveryAttemptStore.record(
                 DeliveryAttemptWrite.from(
@@ -72,6 +87,11 @@ class RoutedResultDeliveryConsumer(
                     reason = deliveryResult.message ?: "Delivery plugin returned failure",
                 )
             }
+            PipelineMetrics.recordDeliveryAttempt(
+                channel = channel,
+                success = deliveryResult.success,
+                failureType = failureType,
+            )
 
             logger.info(
                 "Delivery attempted: eventId={}, channel={}, success={}, message={}",

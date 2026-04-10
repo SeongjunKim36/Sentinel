@@ -145,6 +145,24 @@ With `docker compose -f docker/compose.yml up -d`, Jaeger UI is available at `ht
 
 The webhook response now includes a `traceId`, and the same trace ID is carried into normalized event metadata for end-to-end correlation.
 
+## Pipeline Metrics
+
+Sentinel now emits stage-level business metrics for ingestion, classification filtering, and delivery outcomes.
+
+- `sentinel.pipeline.ingestion.events` with tag `source_type`
+- `sentinel.pipeline.classification.events` with tags `category`, `outcome`, `filter_reason`
+- `sentinel.pipeline.delivery.attempts` with tags `channel`, `outcome`, `failure_type`
+- `sentinel.pipeline.delivery.fanout` summary for number of target channels per routed result
+
+Example PromQL panels:
+
+```promql
+sum by (source_type) (rate(sentinel_pipeline_ingestion_events_total[5m]))
+sum by (outcome, filter_reason) (rate(sentinel_pipeline_classification_events_total[5m]))
+sum by (channel, outcome, failure_type) (rate(sentinel_pipeline_delivery_attempts_total[5m]))
+sum(rate(sentinel_pipeline_delivery_fanout_sum[5m])) / sum(rate(sentinel_pipeline_delivery_fanout_count[5m]))
+```
+
 ## Delivery Attempt Audit
 
 Sentinel persists each channel delivery attempt (including failures and plugin-missing cases) in PostgreSQL table `delivery_attempt`.

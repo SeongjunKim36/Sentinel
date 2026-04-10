@@ -1,6 +1,7 @@
 package io.github.seongjunkim36.sentinel.classification
 
 import io.github.seongjunkim36.sentinel.SentinelTopics
+import io.github.seongjunkim36.sentinel.observability.PipelineMetrics
 import io.github.seongjunkim36.sentinel.shared.Event
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
@@ -21,6 +22,7 @@ class RawEventClassificationConsumer(
     )
     fun consume(event: Event) {
         val classifiedEvent = classificationService.classify(event)
+        PipelineMetrics.recordClassification(classifiedEvent)
 
         if (classifiedEvent.filtered || !classifiedEvent.analyzable) {
             logger.info(

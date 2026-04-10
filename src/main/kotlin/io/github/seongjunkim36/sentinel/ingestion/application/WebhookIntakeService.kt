@@ -1,5 +1,6 @@
 package io.github.seongjunkim36.sentinel.ingestion.application
 
+import io.github.seongjunkim36.sentinel.observability.PipelineMetrics
 import io.github.seongjunkim36.sentinel.shared.Event
 import io.github.seongjunkim36.sentinel.shared.SourcePlugin
 import org.springframework.stereotype.Service
@@ -28,6 +29,7 @@ class WebhookIntakeService(
         )
 
         rawEventPublisher.publish(event)
+        PipelineMetrics.recordIngestion(event.sourceType)
         return event
     }
 }

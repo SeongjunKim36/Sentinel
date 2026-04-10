@@ -8,6 +8,7 @@ import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
+import org.springframework.mock.web.MockHttpServletRequest
 import tools.jackson.databind.json.JsonMapper
 
 class DeadLetterControllerTests {
@@ -50,9 +51,94 @@ class DeadLetterControllerTests {
         assertThat(response.body!!.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAYED)
     }
 
+    @Test
+    fun `rejects replay when authorization is enabled and token is missing`() {
+        val deadLetterStore = RecordingDeadLetterStore()
+        val auditStore = RecordingDeadLetterReplayAuditStore()
+        val deadLetterId = UUID.randomUUID()
+        deadLetterStore.records[deadLetterId] = deadLetterStore.sampleRecord(deadLetterId)
+        val controller =
+            deadLetterController(
+                deadLetterStore = deadLetterStore,
+                auditStore = auditStore,
+                apiProperties =
+                    DeadLetterApiProperties(
+                        replayAuthorization =
+                            DeadLetterReplayAuthorizationProperties(
+                                enabled = true,
+                                token = "secret-token",
+                            ),
+                    ),
+            )
+
+        val request = MockHttpServletRequest()
+
+        val response =
+            kotlin.runCatching {
+                controller.replay(deadLetterId, DeadLetterReplayRequest("manual retry"), request)
+            }.exceptionOrNull()
+
+        assertThat(response).isInstanceOf(DeadLetterReplayUnauthorizedException::class.java)
+    }
+
+    @Test
+    fun `accepts replay when authorization token is valid`() {
+        val deadLetterStore = RecordingDeadLetterStore()
+        val auditStore = RecordingDeadLetterReplayAuditStore()
+        val deadLetterId = UUID.randomUUID()
+        deadLetterStore.records[deadLetterId] = deadLetterStore.sampleRecord(deadLetterId)
+        val controller =
+            deadLetterController(
+                deadLetterStore = deadLetterStore,
+                auditStore = auditStore,
+                apiProperties =
+                    DeadLetterApiProperties(
+                        replayAuthorization =
+                            DeadLetterReplayAuthorizationProperties(
+                                enabled = true,
+                                token = "secret-token",
+                            ),
+                    ),
+            )
+
+        val request =
+            MockHttpServletRequest().apply {
+                addHeader("X-Sentinel-Replay-Token", "secret-token")
+            }
+
+        val response = controller.replay(deadLetterId, DeadLetterReplayRequest("manual retry"), request)
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+    }
+
+    @Test
+    fun `rejects replay when operator note exceeds max length`() {
+        val deadLetterStore = RecordingDeadLetterStore()
+        val auditStore = RecordingDeadLetterReplayAuditStore()
+        val deadLetterId = UUID.randomUUID()
+        deadLetterStore.records[deadLetterId] = deadLetterStore.sampleRecord(deadLetterId)
+        val controller =
+            deadLetterController(
+                deadLetterStore = deadLetterStore,
+                auditStore = auditStore,
+                apiProperties = DeadLetterApiProperties(maxOperatorNoteLength = 10),
+            )
+
+        val request = MockHttpServletRequest()
+        val exception =
+            kotlin.runCatching {
+                controller.replay(deadLetterId, DeadLetterReplayRequest("note-that-is-way-too-long"), request)
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(org.springframework.web.server.ResponseStatusException::class.java)
+        val responseStatusException = exception as org.springframework.web.server.ResponseStatusException
+        assertThat(responseStatusException.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+    }
+
     private fun deadLetterController(
         deadLetterStore: RecordingDeadLetterStore,
         auditStore: RecordingDeadLetterReplayAuditStore,
+        apiProperties: DeadLetterApiProperties = DeadLetterApiProperties(),
     ): DeadLetterController =
         DeadLetterController(
             deadLetterStore = deadLetterStore,
@@ -70,6 +156,11 @@ class DeadLetterControllerTests {
                             requireOperatorNote = true,
                         ),
                 ),
+            deadLetterReplayAuthorizationService =
+                DeadLetterReplayAuthorizationService(
+                    deadLetterApiProperties = apiProperties,
+                ),
+            deadLetterApiProperties = apiProperties,
         )
 
     private class NoOpReplayPublisher : DeadLetterReplayPublisher {

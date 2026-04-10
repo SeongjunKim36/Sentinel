@@ -315,6 +315,18 @@ export SENTINEL_DEAD_LETTER_REPLAY_FAILURE_ALERT_WINDOW=PT30M
 export SENTINEL_DEAD_LETTER_REPLAY_FAILURE_ALERT_CHANNELS=telegram
 ```
 
+Replay API hardening options:
+
+```bash
+export SENTINEL_DEAD_LETTER_API_MAX_QUERY_LIMIT=200
+export SENTINEL_DEAD_LETTER_API_MAX_OPERATOR_NOTE_LENGTH=500
+export SENTINEL_DEAD_LETTER_REPLAY_AUTH_ENABLED=true
+export SENTINEL_DEAD_LETTER_REPLAY_AUTH_HEADER_NAME=X-Sentinel-Replay-Token
+export SENTINEL_DEAD_LETTER_REPLAY_AUTH_TOKEN=replace-with-strong-token
+```
+
+When replay authorization is enabled, `POST /api/v1/dead-letters/{id}/replay` requires the configured header token and returns `401` if missing or invalid.
+
 `POST /api/v1/dead-letters/{id}/replay` can include an operator note:
 
 ```json

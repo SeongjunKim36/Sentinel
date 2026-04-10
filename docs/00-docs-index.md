@@ -23,6 +23,7 @@ Operational runbooks, alerting standards, and observability definitions live her
 
 - [31. Replay Recovery SLO and Alerting](/Users/skl-wade/Wade/Sentinel/docs/30-operations/31-replay-recovery-slo-alerting.md)
 - [32. Webhook Signature Security Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/32-webhook-signature-security-baseline.md)
+- [33. Replay API Authorization and Hardening](/Users/skl-wade/Wade/Sentinel/docs/30-operations/33-replay-api-authorization-and-hardening.md)
 
 ## 99. ADR
 
@@ -62,4 +63,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: prompt/template externalization with versioned rollout controls
 - Done: source webhook signature validation and secret-hardening baseline
 - Done: routing policy and channel-mapping externalization
-- Next: replay operation authorization and API hardening
+- Done: replay operation authorization and API hardening
+- Next: delivery plugin health endpoint and readiness checks

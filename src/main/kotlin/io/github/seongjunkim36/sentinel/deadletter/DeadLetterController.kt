@@ -1,5 +1,6 @@
 package io.github.seongjunkim36.sentinel.deadletter
 
+import jakarta.servlet.http.HttpServletRequest
 import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/api/v1/dead-letters")
@@ -17,6 +19,8 @@ class DeadLetterController(
     private val deadLetterStore: DeadLetterStore,
     private val deadLetterReplayAuditStore: DeadLetterReplayAuditStore,
     private val deadLetterReplayService: DeadLetterReplayService,
+    private val deadLetterReplayAuthorizationService: DeadLetterReplayAuthorizationService,
+    private val deadLetterApiProperties: DeadLetterApiProperties,
 ) {
     @GetMapping
     fun findRecent(
@@ -28,9 +32,9 @@ class DeadLetterController(
         deadLetterStore.findRecent(
             DeadLetterQuery(
                 status = status,
-                tenantId = tenantId,
-                channel = channel,
-                limit = limit,
+                tenantId = normalizeFilter(tenantId),
+                channel = normalizeFilter(channel),
+                limit = normalizeLimit(limit),
             ),
         )
 
@@ -38,10 +42,13 @@ class DeadLetterController(
     fun replay(
         @PathVariable id: UUID,
         @RequestBody(required = false) request: DeadLetterReplayRequest?,
+        httpServletRequest: HttpServletRequest,
     ): ResponseEntity<Map<String, Any>> {
+        deadLetterReplayAuthorizationService.authorizeReplayOrThrow(httpServletRequest)
+        val normalizedOperatorNote = normalizeOperatorNote(request?.operatorNote)
         val replayResult = deadLetterReplayService.replay(
             id = id,
-            operatorNote = request?.operatorNote,
+            operatorNote = normalizedOperatorNote,
         )
         if (replayResult == null) {
             return ResponseEntity.notFound().build()
@@ -75,9 +82,25 @@ class DeadLetterController(
         return ResponseEntity.ok(
             deadLetterReplayAuditStore.findRecentByDeadLetterId(
                 deadLetterId = id,
-                limit = limit,
+                limit = normalizeLimit(limit),
             ),
         )
+    }
+
+    private fun normalizeLimit(limit: Int): Int = limit.coerceIn(1, deadLetterApiProperties.maxQueryLimit.coerceAtLeast(1))
+
+    private fun normalizeFilter(value: String?): String? = value?.trim()?.takeIf { it.isNotBlank() }
+
+    private fun normalizeOperatorNote(operatorNote: String?): String? {
+        val normalized = operatorNote?.trim()?.takeIf { it.isNotBlank() }
+        val maxLength = deadLetterApiProperties.maxOperatorNoteLength.coerceAtLeast(1)
+        if (normalized != null && normalized.length > maxLength) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "operatorNote exceeds maximum length ($maxLength)",
+            )
+        }
+        return normalized
     }
 }
 

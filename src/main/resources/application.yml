@@ -113,6 +113,13 @@ sentinel:
       bot-token: ${SENTINEL_TELEGRAM_BOT_TOKEN:}
       chat-id: ${SENTINEL_TELEGRAM_CHAT_ID:}
   dead-letter:
+    api:
+      max-query-limit: ${SENTINEL_DEAD_LETTER_API_MAX_QUERY_LIMIT:200}
+      max-operator-note-length: ${SENTINEL_DEAD_LETTER_API_MAX_OPERATOR_NOTE_LENGTH:500}
+      replay-authorization:
+        enabled: ${SENTINEL_DEAD_LETTER_REPLAY_AUTH_ENABLED:false}
+        header-name: ${SENTINEL_DEAD_LETTER_REPLAY_AUTH_HEADER_NAME:X-Sentinel-Replay-Token}
+        token: ${SENTINEL_DEAD_LETTER_REPLAY_AUTH_TOKEN:}
     replay:
       max-replay-attempts: ${SENTINEL_DEAD_LETTER_REPLAY_MAX_REPLAY_ATTEMPTS:3}
       cooldown: ${SENTINEL_DEAD_LETTER_REPLAY_COOLDOWN:PT5M}

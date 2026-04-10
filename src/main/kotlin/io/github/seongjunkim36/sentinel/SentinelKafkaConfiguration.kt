@@ -2,6 +2,7 @@ package io.github.seongjunkim36.sentinel
 
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
 import io.github.seongjunkim36.sentinel.shared.ClassifiedEvent
+import io.github.seongjunkim36.sentinel.shared.DeadLetterEvent
 import io.github.seongjunkim36.sentinel.shared.Event
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -68,6 +69,16 @@ class SentinelKafkaConfiguration {
         )
 
     @Bean
+    fun deadLetterEventProducerFactory(
+        @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
+        jsonMapper: JsonMapper,
+    ): ProducerFactory<String, DeadLetterEvent> =
+        jsonProducerFactory(
+            bootstrapServers = bootstrapServers,
+            valueSerializer = JacksonJsonSerializer<DeadLetterEvent>(jsonMapper).noTypeInfo(),
+        )
+
+    @Bean
     fun eventConsumerFactory(
         @Value("\${spring.kafka.bootstrap-servers}") bootstrapServers: String,
         jsonMapper: JsonMapper,
@@ -126,6 +137,11 @@ class SentinelKafkaConfiguration {
     fun routedResultKafkaTemplate(
         routedResultProducerFactory: ProducerFactory<String, AnalysisResult>,
     ): KafkaTemplate<String, AnalysisResult> = KafkaTemplate(routedResultProducerFactory)
+
+    @Bean
+    fun deadLetterEventKafkaTemplate(
+        deadLetterEventProducerFactory: ProducerFactory<String, DeadLetterEvent>,
+    ): KafkaTemplate<String, DeadLetterEvent> = KafkaTemplate(deadLetterEventProducerFactory)
 
     @Bean
     fun eventKafkaListenerContainerFactory(

@@ -31,6 +31,8 @@ The current bootstrap implementation already includes:
 - publication of routed results to `sentinel.routed-results`
 - a `delivery` consumer that dispatches routed results to output plugins
 - persistence of every delivery attempt (success/failure) to PostgreSQL for auditability
+- dead-letter persistence and Kafka publication for failed delivery attempts
+- replay API for dead-letter events back into the routed-results topic
 - a real `SlackOutputPlugin` backed by Slack `chat.postMessage`
 - a real `TelegramOutputPlugin` for end-to-end delivery testing
 - a replaceable `LlmClient` boundary for future provider integrations
@@ -136,6 +138,15 @@ Sentinel persists each channel delivery attempt (including failures and plugin-m
 - Query endpoint: `GET /api/v1/delivery-attempts`
 - Supported filters: `eventId`, `tenantId`, `channel`, `success`, `limit`
 
+## Dead-Letter Handling and Replay
+
+When delivery fails, Sentinel records a dead-letter event in PostgreSQL and publishes it to Kafka topic `sentinel.dead-letter`.
+
+- Flyway migration: `V3__dead_letter_events.sql`
+- Query endpoint: `GET /api/v1/dead-letters`
+- Replay endpoint: `POST /api/v1/dead-letters/{id}/replay`
+- Replay currently supports payload type `ANALYSIS_RESULT` and republishes to `sentinel.routed-results`
+
 ## Classification Deduplication
 
 Classification deduplication is enabled by default and prevents duplicate analyzable events from being sent downstream repeatedly.
@@ -166,4 +177,4 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 
 1. Replace the bootstrap `LlmClient` with a real provider integration.
 2. Add OpenTelemetry and end-to-end trace propagation.
-3. Add a dead-letter handling and replay workflow.
+3. Add replay guardrails (max replay attempts, cooldowns, and operator notes).

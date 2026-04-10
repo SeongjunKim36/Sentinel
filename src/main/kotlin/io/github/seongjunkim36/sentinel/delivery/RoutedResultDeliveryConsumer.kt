@@ -1,6 +1,7 @@
 package io.github.seongjunkim36.sentinel.delivery
 
 import io.github.seongjunkim36.sentinel.SentinelTopics
+import io.github.seongjunkim36.sentinel.deadletter.DeadLetterRecorder
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
 import io.github.seongjunkim36.sentinel.shared.DeliveryResult
 import org.slf4j.LoggerFactory
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component
 class RoutedResultDeliveryConsumer(
     private val outputPluginRegistry: OutputPluginRegistry,
     private val deliveryAttemptStore: DeliveryAttemptStore,
+    private val deadLetterRecorder: DeadLetterRecorder,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -27,6 +29,11 @@ class RoutedResultDeliveryConsumer(
             if (plugin == null) {
                 val message = "No output plugin registered for channel=$channel"
                 logger.warn(message)
+                deadLetterRecorder.recordDeliveryFailure(
+                    result = result,
+                    channel = channel,
+                    reason = message,
+                )
                 deliveryAttemptStore.record(
                     DeliveryAttemptWrite.from(
                         analysisResult = result,
@@ -57,6 +64,14 @@ class RoutedResultDeliveryConsumer(
                     deliveryResult = deliveryResult,
                 ),
             )
+
+            if (!deliveryResult.success) {
+                deadLetterRecorder.recordDeliveryFailure(
+                    result = result,
+                    channel = channel,
+                    reason = deliveryResult.message ?: "Delivery plugin returned failure",
+                )
+            }
 
             logger.info(
                 "Delivery attempted: eventId={}, channel={}, success={}, message={}",

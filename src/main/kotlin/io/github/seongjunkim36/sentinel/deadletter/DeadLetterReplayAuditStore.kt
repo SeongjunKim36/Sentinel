@@ -10,6 +10,12 @@ interface DeadLetterReplayAuditStore {
         deadLetterId: UUID,
         limit: Int = 50,
     ): List<DeadLetterReplayAuditRecord>
+
+    fun countRecentReplayFailures(
+        tenantId: String,
+        channel: String?,
+        since: Instant,
+    ): Long
 }
 
 data class DeadLetterReplayAuditWrite(

@@ -1,10 +1,17 @@
 package io.github.seongjunkim36.sentinel.deadletter
 
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
+import io.github.seongjunkim36.sentinel.shared.AnalysisDetail
 import io.github.seongjunkim36.sentinel.shared.DeadLetterPayloadType
+import io.github.seongjunkim36.sentinel.shared.LlmMetadata
+import io.github.seongjunkim36.sentinel.shared.ResultCategories
+import io.github.seongjunkim36.sentinel.shared.RoutingDecision
+import io.github.seongjunkim36.sentinel.shared.RoutingPriority
+import io.github.seongjunkim36.sentinel.shared.Severity
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import tools.jackson.databind.json.JsonMapper
 
@@ -16,6 +23,8 @@ class DeadLetterReplayService(
     private val jsonMapper: JsonMapper,
     private val replayProperties: DeadLetterReplayProperties,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     fun replay(
         id: UUID,
         operatorNote: String? = null,
@@ -86,12 +95,103 @@ class DeadLetterReplayService(
                 operatorNote = normalizedOperatorNote,
             )
 
-            saveAuditAndBuildResult(
-                id = id,
-                status = DeadLetterStatus.REPLAY_FAILED,
-                outcome = DeadLetterReplayOutcome.REPLAY_FAILED,
-                message = errorMessage,
+            val replayResult =
+                saveAuditAndBuildResult(
+                    id = id,
+                    status = DeadLetterStatus.REPLAY_FAILED,
+                    outcome = DeadLetterReplayOutcome.REPLAY_FAILED,
+                    message = errorMessage,
+                    operatorNote = normalizedOperatorNote,
+                )
+
+            maybePublishReplayFailureAlert(
+                record = record,
+                replayMessage = errorMessage,
                 operatorNote = normalizedOperatorNote,
+            )
+
+            replayResult
+        }
+    }
+
+    private fun maybePublishReplayFailureAlert(
+        record: DeadLetterRecord,
+        replayMessage: String,
+        operatorNote: String?,
+    ) {
+        val failureAlert = replayProperties.failureAlert
+        if (!failureAlert.enabled) {
+            return
+        }
+
+        val threshold = failureAlert.threshold.coerceAtLeast(1)
+        val window = failureAlert.window.coerceAtLeast(Duration.ZERO)
+        val channels =
+            failureAlert.channels
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .distinct()
+        if (channels.isEmpty()) {
+            return
+        }
+
+        val failureCount =
+            deadLetterReplayAuditStore.countRecentReplayFailures(
+                tenantId = record.tenantId,
+                channel = record.channel,
+                since = Instant.now().minus(window),
+            )
+        if (failureCount != threshold.toLong()) {
+            return
+        }
+
+        val channelLabel = record.channel ?: "unknown"
+        val operatorNoteValue = operatorNote ?: "none"
+        val alertResult =
+            AnalysisResult(
+                eventId = record.eventId,
+                tenantId = record.tenantId,
+                category = ResultCategories.REPLAY_FAILURE_ALERT,
+                severity = Severity.CRITICAL,
+                confidence = 1.0,
+                summary =
+                    "Replay failures reached threshold for tenant ${record.tenantId} on channel $channelLabel.",
+                detail =
+                    AnalysisDetail(
+                        analysis =
+                            "Dead-letter replay failures reached $failureCount within ${window}. " +
+                                "Latest replay error: $replayMessage",
+                        actionItems =
+                            listOf(
+                                "Check channel integration and credentials for $channelLabel.",
+                                "Review replay audits for this tenant/channel and triage root cause.",
+                                "Re-run replay after applying the fix and verify successful delivery.",
+                            ),
+                        relatedEvents = listOf(record.eventId),
+                    ),
+                llmMetadata = LlmMetadata(model = "replay-alert", promptVersion = "replay-failure-alert-v1"),
+                routing = RoutingDecision(channels = channels, priority = RoutingPriority.IMMEDIATE),
+            )
+
+        try {
+            deadLetterReplayPublisher.publishAnalysisResult(alertResult)
+            logger.warn(
+                "Published replay-failure alert: tenantId={}, channel={}, failures={}, window={}, threshold={}, deadLetterId={}, operatorNote={}",
+                record.tenantId,
+                channelLabel,
+                failureCount,
+                window,
+                threshold,
+                record.id,
+                operatorNoteValue,
+            )
+        } catch (exception: Exception) {
+            logger.error(
+                "Failed to publish replay-failure alert: tenantId={}, channel={}, deadLetterId={}",
+                record.tenantId,
+                channelLabel,
+                record.id,
+                exception,
             )
         }
     }

@@ -106,6 +106,12 @@ class DeadLetterControllerTests {
                 .filter { it.deadLetterId == deadLetterId }
                 .take(limit.coerceAtLeast(1))
         }
+
+        override fun countRecentReplayFailures(
+            tenantId: String,
+            channel: String?,
+            since: Instant,
+        ): Long = 0
     }
 
     private class RecordingDeadLetterStore : DeadLetterStore {

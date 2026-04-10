@@ -187,6 +187,10 @@ Replay guardrails are enabled by default.
 export SENTINEL_DEAD_LETTER_REPLAY_MAX_REPLAY_ATTEMPTS=3
 export SENTINEL_DEAD_LETTER_REPLAY_COOLDOWN=PT5M
 export SENTINEL_DEAD_LETTER_REPLAY_REQUIRE_OPERATOR_NOTE=true
+export SENTINEL_DEAD_LETTER_REPLAY_FAILURE_ALERT_ENABLED=true
+export SENTINEL_DEAD_LETTER_REPLAY_FAILURE_ALERT_THRESHOLD=3
+export SENTINEL_DEAD_LETTER_REPLAY_FAILURE_ALERT_WINDOW=PT30M
+export SENTINEL_DEAD_LETTER_REPLAY_FAILURE_ALERT_CHANNELS=telegram
 ```
 
 `POST /api/v1/dead-letters/{id}/replay` can include an operator note:
@@ -198,6 +202,8 @@ export SENTINEL_DEAD_LETTER_REPLAY_REQUIRE_OPERATOR_NOTE=true
 ```
 
 If max attempts are exhausted or cooldown is active, replay is blocked with HTTP `409 Conflict`.
+
+When replay failures for the same tenant and channel reach the configured threshold within the configured window, Sentinel publishes a `replay-failure-alert` routed result to the configured alert channels.
 
 ## Classification Deduplication
 
@@ -229,4 +235,4 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 
 1. Replace the bootstrap `LlmClient` with a real provider integration.
 2. Add stage-level custom business metrics dashboards (ingestion/filtering/delivery outcomes).
-3. Add alerting/notifications on repeated replay failures by channel and tenant.
+3. Add dedicated dashboards for replay-failure-alert frequency and mean time to recovery.

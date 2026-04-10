@@ -8,4 +8,12 @@ data class DeadLetterReplayProperties(
     val maxReplayAttempts: Int = 3,
     val cooldown: Duration = Duration.ofMinutes(5),
     val requireOperatorNote: Boolean = true,
+    val failureAlert: DeadLetterReplayFailureAlertProperties = DeadLetterReplayFailureAlertProperties(),
+)
+
+data class DeadLetterReplayFailureAlertProperties(
+    val enabled: Boolean = true,
+    val threshold: Int = 3,
+    val window: Duration = Duration.ofMinutes(30),
+    val channels: List<String> = listOf("telegram"),
 )

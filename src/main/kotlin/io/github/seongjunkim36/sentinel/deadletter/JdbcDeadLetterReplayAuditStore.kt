@@ -2,6 +2,7 @@ package io.github.seongjunkim36.sentinel.deadletter
 
 import java.sql.ResultSet
 import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 import org.springframework.jdbc.core.JdbcTemplate
 
@@ -53,6 +54,36 @@ class JdbcDeadLetterReplayAuditStore(
             deadLetterId,
             normalizedLimit,
         )
+    }
+
+    override fun countRecentReplayFailures(
+        tenantId: String,
+        channel: String?,
+        since: Instant,
+    ): Long {
+        val sql =
+            """
+            select count(*)
+            from dead_letter_replay_audit audit
+            join dead_letter_event event on event.id = audit.dead_letter_id
+            where
+                audit.outcome = ?
+                and event.tenant_id = ?
+                and (
+                    (? is null and event.channel is null) or event.channel = ?
+                )
+                and audit.created_at >= ?
+            """.trimIndent()
+
+        return jdbcTemplate.queryForObject(
+            sql,
+            Long::class.java,
+            DeadLetterReplayOutcome.REPLAY_FAILED.name,
+            tenantId,
+            channel,
+            channel,
+            Timestamp.from(since),
+        ) ?: 0L
     }
 
     private fun ResultSet.toAuditRecord(): DeadLetterReplayAuditRecord =

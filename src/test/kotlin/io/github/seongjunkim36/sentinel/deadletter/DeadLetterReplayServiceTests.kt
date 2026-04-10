@@ -4,6 +4,7 @@ import io.github.seongjunkim36.sentinel.shared.AnalysisDetail
 import io.github.seongjunkim36.sentinel.shared.AnalysisResult
 import io.github.seongjunkim36.sentinel.shared.DeadLetterPayloadType
 import io.github.seongjunkim36.sentinel.shared.LlmMetadata
+import io.github.seongjunkim36.sentinel.shared.ResultCategories
 import io.github.seongjunkim36.sentinel.shared.RoutingDecision
 import io.github.seongjunkim36.sentinel.shared.Severity
 import java.time.Duration
@@ -17,7 +18,7 @@ class DeadLetterReplayServiceTests {
     @Test
     fun `replays analysis result dead-letter and marks replayed`() {
         val recordStore = InMemoryDeadLetterStore()
-        val auditStore = InMemoryDeadLetterReplayAuditStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore(recordStore)
         val publisher = RecordingRoutedResultPublisher()
         val replayService =
             replayService(
@@ -78,7 +79,7 @@ class DeadLetterReplayServiceTests {
     @Test
     fun `marks replay failed when payload cannot be parsed`() {
         val recordStore = InMemoryDeadLetterStore()
-        val auditStore = InMemoryDeadLetterReplayAuditStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore(recordStore)
         val publisher = RecordingRoutedResultPublisher()
         val replayService =
             replayService(
@@ -118,12 +119,54 @@ class DeadLetterReplayServiceTests {
         assertThat(recordStore.records[deadLetterId]!!.lastReplayOperatorNote).isEqualTo("retry to verify payload")
         assertThat(auditStore.records).hasSize(1)
         assertThat(auditStore.records.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAY_FAILED)
+        assertThat(publisher.publishedResults).isEmpty()
+    }
+
+    @Test
+    fun `publishes replay failure alert when threshold is reached for tenant and channel`() {
+        val recordStore = InMemoryDeadLetterStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore(recordStore)
+        val publisher = RecordingRoutedResultPublisher()
+        val replayService =
+            replayService(
+                recordStore = recordStore,
+                auditStore = auditStore,
+                publisher = publisher,
+                failureAlertThreshold = 2,
+                failureAlertWindow = Duration.ofMinutes(30),
+                failureAlertChannels = listOf("telegram"),
+            )
+
+        val firstDeadLetterId = UUID.randomUUID()
+        val secondDeadLetterId = UUID.randomUUID()
+        recordStore.records[firstDeadLetterId] =
+            recordStore.invalidPayloadRecord(
+                deadLetterId = firstDeadLetterId,
+                tenantId = "tenant-alpha",
+                channel = "telegram",
+            )
+        recordStore.records[secondDeadLetterId] =
+            recordStore.invalidPayloadRecord(
+                deadLetterId = secondDeadLetterId,
+                tenantId = "tenant-alpha",
+                channel = "telegram",
+            )
+
+        replayService.replay(firstDeadLetterId, operatorNote = "first retry")
+        replayService.replay(secondDeadLetterId, operatorNote = "second retry")
+
+        assertThat(publisher.publishedResults).hasSize(1)
+        val alertResult = publisher.publishedResults.single()
+        assertThat(alertResult.category).isEqualTo(ResultCategories.REPLAY_FAILURE_ALERT)
+        assertThat(alertResult.routing.channels).containsExactly("telegram")
+        assertThat(alertResult.summary).contains("tenant-alpha")
+        assertThat(alertResult.summary).contains("telegram")
     }
 
     @Test
     fun `blocks replay when operator note is missing`() {
         val recordStore = InMemoryDeadLetterStore()
-        val auditStore = InMemoryDeadLetterReplayAuditStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore(recordStore)
         val publisher = RecordingRoutedResultPublisher()
         val replayService = replayService(recordStore, auditStore, publisher)
         val deadLetterId = UUID.randomUUID()
@@ -145,7 +188,7 @@ class DeadLetterReplayServiceTests {
     @Test
     fun `blocks replay when max attempts is reached`() {
         val recordStore = InMemoryDeadLetterStore()
-        val auditStore = InMemoryDeadLetterReplayAuditStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore(recordStore)
         val publisher = RecordingRoutedResultPublisher()
         val replayService = replayService(recordStore, auditStore, publisher, maxReplayAttempts = 1)
         val deadLetterId = UUID.randomUUID()
@@ -170,7 +213,7 @@ class DeadLetterReplayServiceTests {
     @Test
     fun `blocks replay during cooldown`() {
         val recordStore = InMemoryDeadLetterStore()
-        val auditStore = InMemoryDeadLetterReplayAuditStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore(recordStore)
         val publisher = RecordingRoutedResultPublisher()
         val replayService = replayService(recordStore, auditStore, publisher, cooldown = Duration.ofMinutes(5))
         val deadLetterId = UUID.randomUUID()
@@ -201,11 +244,15 @@ class DeadLetterReplayServiceTests {
 
     private fun replayService(
         recordStore: InMemoryDeadLetterStore = InMemoryDeadLetterStore(),
-        auditStore: InMemoryDeadLetterReplayAuditStore = InMemoryDeadLetterReplayAuditStore(),
+        auditStore: InMemoryDeadLetterReplayAuditStore = InMemoryDeadLetterReplayAuditStore(recordStore),
         publisher: RecordingRoutedResultPublisher = RecordingRoutedResultPublisher(),
         maxReplayAttempts: Int = 3,
         cooldown: Duration = Duration.ofMinutes(5),
         requireOperatorNote: Boolean = true,
+        failureAlertEnabled: Boolean = true,
+        failureAlertThreshold: Int = 3,
+        failureAlertWindow: Duration = Duration.ofMinutes(30),
+        failureAlertChannels: List<String> = listOf("telegram"),
     ): DeadLetterReplayService =
         DeadLetterReplayService(
             deadLetterStore = recordStore,
@@ -217,6 +264,13 @@ class DeadLetterReplayServiceTests {
                     maxReplayAttempts = maxReplayAttempts,
                     cooldown = cooldown,
                     requireOperatorNote = requireOperatorNote,
+                    failureAlert =
+                        DeadLetterReplayFailureAlertProperties(
+                            enabled = failureAlertEnabled,
+                            threshold = failureAlertThreshold,
+                            window = failureAlertWindow,
+                            channels = failureAlertChannels,
+                        ),
                 ),
         )
 
@@ -268,6 +322,29 @@ class DeadLetterReplayServiceTests {
                 lastReplayOperatorNote = null,
             )
         }
+
+        fun invalidPayloadRecord(
+            deadLetterId: UUID,
+            tenantId: String,
+            channel: String?,
+        ): DeadLetterRecord =
+            DeadLetterRecord(
+                id = deadLetterId,
+                sourceStage = "delivery",
+                sourceTopic = "sentinel.routed-results",
+                tenantId = tenantId,
+                eventId = UUID.randomUUID(),
+                channel = channel,
+                reason = "invalid payload",
+                payloadType = DeadLetterPayloadType.ANALYSIS_RESULT,
+                payload = "{not-valid-json}",
+                status = DeadLetterStatus.OPEN,
+                replayCount = 0,
+                createdAt = Instant.now(),
+                lastReplayAt = null,
+                lastReplayError = null,
+                lastReplayOperatorNote = null,
+            )
 
         override fun save(write: DeadLetterWrite): DeadLetterRecord {
             val record =
@@ -330,7 +407,9 @@ class DeadLetterReplayServiceTests {
         }
     }
 
-    private class InMemoryDeadLetterReplayAuditStore : DeadLetterReplayAuditStore {
+    private class InMemoryDeadLetterReplayAuditStore(
+        private val deadLetterStore: InMemoryDeadLetterStore,
+    ) : DeadLetterReplayAuditStore {
         private var currentId = 0L
         val records = mutableListOf<DeadLetterReplayAuditRecord>()
 
@@ -356,5 +435,21 @@ class DeadLetterReplayServiceTests {
                 .asReversed()
                 .filter { it.deadLetterId == deadLetterId }
                 .take(limit.coerceAtLeast(1))
+
+        override fun countRecentReplayFailures(
+            tenantId: String,
+            channel: String?,
+            since: Instant,
+        ): Long =
+            records.count { audit ->
+                if (audit.outcome != DeadLetterReplayOutcome.REPLAY_FAILED) {
+                    return@count false
+                }
+
+                val deadLetter = deadLetterStore.records[audit.deadLetterId] ?: return@count false
+                deadLetter.tenantId == tenantId &&
+                    deadLetter.channel == channel &&
+                    !audit.createdAt.isBefore(since)
+            }.toLong()
     }
 }

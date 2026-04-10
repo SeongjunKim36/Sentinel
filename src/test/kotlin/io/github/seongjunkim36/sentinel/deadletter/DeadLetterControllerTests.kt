@@ -9,6 +9,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.web.server.ResponseStatusException
 import tools.jackson.databind.json.JsonMapper
 
 class DeadLetterControllerTests {
@@ -18,37 +19,75 @@ class DeadLetterControllerTests {
         val auditStore = RecordingDeadLetterReplayAuditStore()
         val controller = deadLetterController(deadLetterStore, auditStore)
 
-        val response = controller.findReplayAudits(UUID.randomUUID(), limit = 25)
+        val response =
+            controller.findReplayAudits(
+                id = UUID.randomUUID(),
+                limit = 25,
+                cursor = null,
+                tenantScopeHeader = "tenant-alpha",
+            )
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
         assertThat(response.body).isNull()
     }
 
     @Test
-    fun `returns replay audits with requested limit`() {
+    fun `returns replay audits with cursor pagination`() {
         val deadLetterStore = RecordingDeadLetterStore()
         val auditStore = RecordingDeadLetterReplayAuditStore()
         val deadLetterId = UUID.randomUUID()
-        deadLetterStore.records[deadLetterId] = deadLetterStore.sampleRecord(deadLetterId)
+        deadLetterStore.records[deadLetterId] = deadLetterStore.sampleRecord(deadLetterId, createdAt = Instant.parse("2026-04-01T00:00:00Z"))
         auditStore.records +=
             DeadLetterReplayAuditRecord(
                 id = 1L,
                 deadLetterId = deadLetterId,
+                outcome = DeadLetterReplayOutcome.REPLAY_FAILED,
+                status = DeadLetterStatus.REPLAY_FAILED,
+                message = "failed",
+                operatorNote = "first",
+                createdAt = Instant.parse("2026-04-01T00:05:00Z"),
+            )
+        auditStore.records +=
+            DeadLetterReplayAuditRecord(
+                id = 2L,
+                deadLetterId = deadLetterId,
                 outcome = DeadLetterReplayOutcome.REPLAYED,
                 status = DeadLetterStatus.REPLAYED,
-                message = "Replay published",
-                operatorNote = "manual replay",
-                createdAt = Instant.now(),
+                message = "replayed",
+                operatorNote = "second",
+                createdAt = Instant.parse("2026-04-01T00:10:00Z"),
             )
         val controller = deadLetterController(deadLetterStore, auditStore)
 
-        val response = controller.findReplayAudits(deadLetterId, limit = 10)
+        val first =
+            controller.findReplayAudits(
+                id = deadLetterId,
+                limit = 1,
+                cursor = null,
+                tenantScopeHeader = "tenant-alpha",
+            )
 
-        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(first.statusCode).isEqualTo(HttpStatus.OK)
         assertThat(auditStore.lastDeadLetterId).isEqualTo(deadLetterId)
-        assertThat(auditStore.lastLimit).isEqualTo(10)
-        assertThat(response.body).hasSize(1)
-        assertThat(response.body!!.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAYED)
+        assertThat(auditStore.lastQuery!!.limit).isEqualTo(2)
+        assertThat(first.body!!.items).hasSize(1)
+        assertThat(first.body!!.items.single().id).isEqualTo(2L)
+        assertThat(first.body!!.page.hasMore).isTrue()
+        assertThat(first.body!!.page.nextCursor).isNotBlank()
+
+        val second =
+            controller.findReplayAudits(
+                id = deadLetterId,
+                limit = 1,
+                cursor = first.body!!.page.nextCursor,
+                tenantScopeHeader = "tenant-alpha",
+            )
+
+        assertThat(second.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(second.body!!.items).hasSize(1)
+        assertThat(second.body!!.items.single().id).isEqualTo(1L)
+        assertThat(second.body!!.page.hasMore).isFalse()
+        assertThat(second.body!!.page.nextCursor).isNull()
     }
 
     @Test
@@ -72,10 +111,14 @@ class DeadLetterControllerTests {
             )
 
         val request = MockHttpServletRequest()
-
         val response =
             kotlin.runCatching {
-                controller.replay(deadLetterId, DeadLetterReplayRequest("manual retry"), request)
+                controller.replay(
+                    id = deadLetterId,
+                    request = DeadLetterReplayRequest("manual retry"),
+                    tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = request,
+                )
             }.exceptionOrNull()
 
         assertThat(response).isInstanceOf(DeadLetterReplayUnauthorizedException::class.java)
@@ -106,9 +149,38 @@ class DeadLetterControllerTests {
                 addHeader("X-Sentinel-Replay-Token", "secret-token")
             }
 
-        val response = controller.replay(deadLetterId, DeadLetterReplayRequest("manual retry"), request)
+        val response =
+            controller.replay(
+                id = deadLetterId,
+                request = DeadLetterReplayRequest("manual retry"),
+                tenantScopeHeader = "tenant-alpha",
+                httpServletRequest = request,
+            )
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+    }
+
+    @Test
+    fun `returns not found when replay request is outside tenant scope`() {
+        val deadLetterStore = RecordingDeadLetterStore()
+        val auditStore = RecordingDeadLetterReplayAuditStore()
+        val deadLetterId = UUID.randomUUID()
+        deadLetterStore.records[deadLetterId] =
+            deadLetterStore.sampleRecord(
+                id = deadLetterId,
+                tenantId = "tenant-alpha",
+            )
+        val controller = deadLetterController(deadLetterStore, auditStore)
+
+        val response =
+            controller.replay(
+                id = deadLetterId,
+                request = DeadLetterReplayRequest("manual retry"),
+                tenantScopeHeader = "tenant-beta",
+                httpServletRequest = MockHttpServletRequest(),
+            )
+
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
     }
 
     @Test
@@ -124,15 +196,99 @@ class DeadLetterControllerTests {
                 apiProperties = DeadLetterApiProperties(maxOperatorNoteLength = 10),
             )
 
-        val request = MockHttpServletRequest()
-        val exception =
+        val response =
             kotlin.runCatching {
-                controller.replay(deadLetterId, DeadLetterReplayRequest("note-that-is-way-too-long"), request)
+                controller.replay(
+                    id = deadLetterId,
+                    request = DeadLetterReplayRequest("note-that-is-way-too-long"),
+                    tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = MockHttpServletRequest(),
+                )
             }.exceptionOrNull()
 
-        assertThat(exception).isInstanceOf(org.springframework.web.server.ResponseStatusException::class.java)
-        val responseStatusException = exception as org.springframework.web.server.ResponseStatusException
+        assertThat(response).isInstanceOf(ResponseStatusException::class.java)
+        val responseStatusException = response as ResponseStatusException
         assertThat(responseStatusException.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun `rejects dead-letter list query when tenant filter mismatches tenant scope`() {
+        val deadLetterStore = RecordingDeadLetterStore()
+        val auditStore = RecordingDeadLetterReplayAuditStore()
+        val controller = deadLetterController(deadLetterStore, auditStore)
+
+        val response =
+            kotlin.runCatching {
+                controller.findRecent(
+                    status = null,
+                    tenantId = "tenant-beta",
+                    channel = null,
+                    limit = 50,
+                    cursor = null,
+                    tenantScopeHeader = "tenant-alpha",
+                )
+            }.exceptionOrNull()
+
+        assertThat(response).isInstanceOf(ResponseStatusException::class.java)
+        assertThat((response as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun `returns dead-letter records with cursor pagination under tenant scope`() {
+        val deadLetterStore = RecordingDeadLetterStore()
+        val auditStore = RecordingDeadLetterReplayAuditStore()
+        val firstId = UUID.randomUUID()
+        val secondId = UUID.randomUUID()
+        deadLetterStore.records[firstId] =
+            deadLetterStore.sampleRecord(
+                id = firstId,
+                tenantId = "tenant-alpha",
+                createdAt = Instant.parse("2026-04-01T00:10:00Z"),
+            )
+        deadLetterStore.records[secondId] =
+            deadLetterStore.sampleRecord(
+                id = secondId,
+                tenantId = "tenant-alpha",
+                createdAt = Instant.parse("2026-04-01T00:05:00Z"),
+            )
+        val otherTenantId = UUID.randomUUID()
+        deadLetterStore.records[otherTenantId] =
+            deadLetterStore.sampleRecord(
+                id = otherTenantId,
+                tenantId = "tenant-beta",
+                createdAt = Instant.parse("2026-04-01T00:15:00Z"),
+            )
+        val controller = deadLetterController(deadLetterStore, auditStore)
+
+        val first =
+            controller.findRecent(
+                status = null,
+                tenantId = null,
+                channel = null,
+                limit = 1,
+                cursor = null,
+                tenantScopeHeader = "tenant-alpha",
+            )
+
+        assertThat(first.items).hasSize(1)
+        assertThat(first.items.single().tenantId).isEqualTo("tenant-alpha")
+        assertThat(first.page.hasMore).isTrue()
+        assertThat(first.page.nextCursor).isNotBlank()
+
+        val second =
+            controller.findRecent(
+                status = null,
+                tenantId = null,
+                channel = null,
+                limit = 1,
+                cursor = first.page.nextCursor,
+                tenantScopeHeader = "tenant-alpha",
+            )
+
+        assertThat(second.items).hasSize(1)
+        assertThat(second.items.single().tenantId).isEqualTo("tenant-alpha")
+        assertThat(second.page.hasMore).isFalse()
+        assertThat(second.page.nextCursor).isNull()
     }
 
     private fun deadLetterController(
@@ -171,7 +327,7 @@ class DeadLetterControllerTests {
     private class RecordingDeadLetterReplayAuditStore : DeadLetterReplayAuditStore {
         val records = mutableListOf<DeadLetterReplayAuditRecord>()
         var lastDeadLetterId: UUID? = null
-        var lastLimit: Int? = null
+        var lastQuery: DeadLetterReplayAuditQuery? = null
 
         override fun save(write: DeadLetterReplayAuditWrite) {
             records +=
@@ -188,14 +344,27 @@ class DeadLetterControllerTests {
 
         override fun findRecentByDeadLetterId(
             deadLetterId: UUID,
-            limit: Int,
+            query: DeadLetterReplayAuditQuery,
         ): List<DeadLetterReplayAuditRecord> {
             lastDeadLetterId = deadLetterId
-            lastLimit = limit
-            return records
-                .asReversed()
-                .filter { it.deadLetterId == deadLetterId }
-                .take(limit.coerceAtLeast(1))
+            lastQuery = query
+            val sorted =
+                records
+                    .filter { it.deadLetterId == deadLetterId }
+                    .sortedWith(
+                        compareByDescending<DeadLetterReplayAuditRecord> { it.createdAt }
+                            .thenByDescending { it.id },
+                    )
+
+            val cursorFiltered =
+                query.cursor?.let { cursor ->
+                    sorted.filter { record ->
+                        record.createdAt.isBefore(cursor.createdAt) ||
+                            (record.createdAt == cursor.createdAt && record.id < cursor.id)
+                    }
+                } ?: sorted
+
+            return cursorFiltered.take(query.limit.coerceAtLeast(1))
         }
 
         override fun countRecentReplayFailures(
@@ -208,12 +377,16 @@ class DeadLetterControllerTests {
     private class RecordingDeadLetterStore : DeadLetterStore {
         val records = mutableMapOf<UUID, DeadLetterRecord>()
 
-        fun sampleRecord(id: UUID): DeadLetterRecord =
+        fun sampleRecord(
+            id: UUID,
+            tenantId: String = "tenant-alpha",
+            createdAt: Instant = Instant.now(),
+        ): DeadLetterRecord =
             DeadLetterRecord(
                 id = id,
                 sourceStage = "delivery",
                 sourceTopic = "sentinel.routed-results",
-                tenantId = "tenant-alpha",
+                tenantId = tenantId,
                 eventId = UUID.randomUUID(),
                 channel = "telegram",
                 reason = "timeout",
@@ -221,21 +394,43 @@ class DeadLetterControllerTests {
                 payload = "{}",
                 status = DeadLetterStatus.OPEN,
                 replayCount = 0,
-                createdAt = Instant.now(),
+                createdAt = createdAt,
                 lastReplayAt = null,
                 lastReplayError = null,
                 lastReplayOperatorNote = null,
             )
 
         override fun save(write: DeadLetterWrite): DeadLetterRecord {
-            val record = sampleRecord(write.id)
+            val record = sampleRecord(write.id, tenantId = write.tenantId, createdAt = write.createdAt)
             records[write.id] = record
             return record
         }
 
         override fun findById(id: UUID): DeadLetterRecord? = records[id]
 
-        override fun findRecent(query: DeadLetterQuery): List<DeadLetterRecord> = records.values.toList()
+        override fun findRecent(query: DeadLetterQuery): List<DeadLetterRecord> {
+            val sorted =
+                records.values
+                    .asSequence()
+                    .filter { record -> query.status == null || record.status == query.status }
+                    .filter { record -> query.tenantId == null || record.tenantId == query.tenantId }
+                    .filter { record -> query.channel == null || record.channel == query.channel }
+                    .sortedWith(
+                        compareByDescending<DeadLetterRecord> { it.createdAt }
+                            .thenByDescending { it.id },
+                    )
+                    .toList()
+
+            val cursorFiltered =
+                query.cursor?.let { cursor ->
+                    sorted.filter { record ->
+                        record.createdAt.isBefore(cursor.createdAt) ||
+                            (record.createdAt == cursor.createdAt && record.id < cursor.id)
+                    }
+                } ?: sorted
+
+            return cursorFiltered.take(query.limit.coerceAtLeast(1))
+        }
 
         override fun markReplayed(
             id: UUID,

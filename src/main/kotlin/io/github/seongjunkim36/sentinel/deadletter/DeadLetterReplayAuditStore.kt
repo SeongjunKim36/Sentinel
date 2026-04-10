@@ -8,7 +8,7 @@ interface DeadLetterReplayAuditStore {
 
     fun findRecentByDeadLetterId(
         deadLetterId: UUID,
-        limit: Int = 50,
+        query: DeadLetterReplayAuditQuery = DeadLetterReplayAuditQuery(),
     ): List<DeadLetterReplayAuditRecord>
 
     fun countRecentReplayFailures(
@@ -35,4 +35,14 @@ data class DeadLetterReplayAuditRecord(
     val message: String,
     val operatorNote: String?,
     val createdAt: Instant,
+)
+
+data class DeadLetterReplayAuditQuery(
+    val limit: Int = 50,
+    val cursor: DeadLetterReplayAuditCursor? = null,
+)
+
+data class DeadLetterReplayAuditCursor(
+    val createdAt: Instant,
+    val id: Long,
 )

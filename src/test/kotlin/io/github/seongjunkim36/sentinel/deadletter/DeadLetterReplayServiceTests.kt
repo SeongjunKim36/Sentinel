@@ -429,12 +429,19 @@ class DeadLetterReplayServiceTests {
 
         override fun findRecentByDeadLetterId(
             deadLetterId: UUID,
-            limit: Int,
+            query: DeadLetterReplayAuditQuery,
         ): List<DeadLetterReplayAuditRecord> =
             records
                 .asReversed()
                 .filter { it.deadLetterId == deadLetterId }
-                .take(limit.coerceAtLeast(1))
+                .let { audits ->
+                    query.cursor?.let { cursor ->
+                        audits.filter { audit ->
+                            audit.createdAt.isBefore(cursor.createdAt) ||
+                                (audit.createdAt == cursor.createdAt && audit.id < cursor.id)
+                        }
+                    } ?: audits
+                }.take(query.limit.coerceAtLeast(1))
 
         override fun countRecentReplayFailures(
             tenantId: String,

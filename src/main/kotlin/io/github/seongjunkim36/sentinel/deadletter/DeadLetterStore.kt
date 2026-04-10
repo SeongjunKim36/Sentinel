@@ -63,6 +63,12 @@ data class DeadLetterQuery(
     val tenantId: String? = null,
     val channel: String? = null,
     val limit: Int = 50,
+    val cursor: DeadLetterCursor? = null,
+)
+
+data class DeadLetterCursor(
+    val createdAt: Instant,
+    val id: UUID,
 )
 
 enum class DeadLetterStatus {

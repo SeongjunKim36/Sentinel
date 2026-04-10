@@ -9,7 +9,7 @@ class NoOpDeadLetterReplayAuditStore : DeadLetterReplayAuditStore {
 
     override fun findRecentByDeadLetterId(
         deadLetterId: UUID,
-        limit: Int,
+        query: DeadLetterReplayAuditQuery,
     ): List<DeadLetterReplayAuditRecord> = emptyList()
 
     override fun countRecentReplayFailures(

@@ -306,11 +306,12 @@ Readiness is `DOWN` when any required default channel in `sentinel.delivery.defa
 
 When delivery fails, Sentinel records a dead-letter event in PostgreSQL and publishes it to Kafka topic `sentinel.dead-letter`.
 
-- Flyway migrations: `V3__dead_letter_events.sql`, `V4__dead_letter_replay_operator_note.sql`, `V5__dead_letter_replay_audits.sql`
+- Flyway migrations: `V3__dead_letter_events.sql`, `V4__dead_letter_replay_operator_note.sql`, `V5__dead_letter_replay_audits.sql`, `V6__dead_letter_pagination_indexes.sql`
 - Query endpoint: `GET /api/v1/dead-letters`
 - Replay endpoint: `POST /api/v1/dead-letters/{id}/replay`
 - Replay audit endpoint: `GET /api/v1/dead-letters/{id}/replay-audits`
 - Replay currently supports payload type `ANALYSIS_RESULT` and republishes to `sentinel.routed-results`
+- Dead-letter APIs are tenant-scoped by required request header: `X-Sentinel-Tenant-Id`
 
 Replay guardrails are enabled by default.
 
@@ -335,6 +336,11 @@ export SENTINEL_DEAD_LETTER_REPLAY_AUTH_TOKEN=replace-with-strong-token
 ```
 
 When replay authorization is enabled, `POST /api/v1/dead-letters/{id}/replay` requires the configured header token and returns `401` if missing or invalid.
+
+Dead-letter list and replay-audit endpoints support cursor pagination with a contract:
+
+- Request params: `limit`, `cursor`
+- Response shape: `{ "items": [...], "page": { "limit": n, "hasMore": bool, "nextCursor": "..." } }`
 
 `POST /api/v1/dead-letters/{id}/replay` can include an operator note:
 

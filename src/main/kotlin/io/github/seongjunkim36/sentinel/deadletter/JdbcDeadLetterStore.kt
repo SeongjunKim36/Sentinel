@@ -128,7 +128,14 @@ class JdbcDeadLetterStore(
                     args += it
                 }
 
-                append(" order by created_at desc limit ?")
+                query.cursor?.let {
+                    append(" and (created_at < ? or (created_at = ? and id < ?))")
+                    args += Timestamp.from(it.createdAt)
+                    args += Timestamp.from(it.createdAt)
+                    args += it.id
+                }
+
+                append(" order by created_at desc, id desc limit ?")
                 args += limit
             }
 

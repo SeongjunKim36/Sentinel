@@ -32,27 +32,42 @@ class JdbcDeadLetterReplayAuditStore(
 
     override fun findRecentByDeadLetterId(
         deadLetterId: UUID,
-        limit: Int,
+        query: DeadLetterReplayAuditQuery,
     ): List<DeadLetterReplayAuditRecord> {
-        val normalizedLimit = limit.coerceIn(1, 200)
+        val normalizedLimit = query.limit.coerceIn(1, 200)
+        val args = mutableListOf<Any>(deadLetterId)
+        val sql =
+            buildString {
+                append(
+                    """
+                    select
+                        id,
+                        dead_letter_id,
+                        outcome,
+                        status,
+                        message,
+                        operator_note,
+                        created_at
+                    from dead_letter_replay_audit
+                    where dead_letter_id = ?
+                    """.trimIndent(),
+                )
+
+                query.cursor?.let {
+                    append(" and (created_at < ? or (created_at = ? and id < ?))")
+                    args += Timestamp.from(it.createdAt)
+                    args += Timestamp.from(it.createdAt)
+                    args += it.id
+                }
+
+                append(" order by created_at desc, id desc limit ?")
+                args += normalizedLimit
+            }
+
         return jdbcTemplate.query(
-            """
-            select
-                id,
-                dead_letter_id,
-                outcome,
-                status,
-                message,
-                operator_note,
-                created_at
-            from dead_letter_replay_audit
-            where dead_letter_id = ?
-            order by created_at desc
-            limit ?
-            """.trimIndent(),
+            sql,
             { rs, _ -> rs.toAuditRecord() },
-            deadLetterId,
-            normalizedLimit,
+            *args.toTypedArray(),
         )
     }
 

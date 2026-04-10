@@ -170,6 +170,32 @@ export SENTINEL_ANALYSIS_LLM_PROMPT_CANARY_PERCENTAGE=10
 
 Tenant-specific overrides can be defined in `application.yml` with `sentinel.analysis.llm.prompt-rollout.tenant-overrides`.
 
+## Routing Policy Setup
+
+Evaluation routing is externally configurable by severity and category.
+
+```bash
+export SENTINEL_EVALUATION_MINIMUM_CONFIDENCE=0.5
+```
+
+Configure channel/priority mapping in `application.yml` under `sentinel.evaluation.routing`:
+
+- `default-channels`
+- `severity-policies`
+- `category-policies`
+
+Example category override:
+
+```yaml
+sentinel:
+  evaluation:
+    routing:
+      category-policies:
+        replay-failure-alert:
+          channels: [telegram, slack]
+          priority: IMMEDIATE
+```
+
 ## Local Demo
 
 You can exercise the full webhook-to-delivery path locally with the included sample payload.

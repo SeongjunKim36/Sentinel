@@ -15,6 +15,7 @@ Foundation documents define the direction, scope, and initial implementation str
 Domain-level behavior and contract semantics are documented here.
 
 - [21. Analysis Prompt Versioning and Rollout](/Users/skl-wade/Wade/Sentinel/docs/20-domain/21-analysis-prompt-versioning.md)
+- [22. Routing Policy and Channel Mapping](/Users/skl-wade/Wade/Sentinel/docs/20-domain/22-routing-policy-and-channel-mapping.md)
 
 ## 30. Operations
 
@@ -60,4 +61,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: Prometheus alerting rules and replay recovery SLO thresholds
 - Done: prompt/template externalization with versioned rollout controls
 - Done: source webhook signature validation and secret-hardening baseline
-- Next: routing policy and channel-mapping externalization
+- Done: routing policy and channel-mapping externalization
+- Next: replay operation authorization and API hardening

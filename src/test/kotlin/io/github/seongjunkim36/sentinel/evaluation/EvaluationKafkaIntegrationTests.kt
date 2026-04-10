@@ -29,7 +29,7 @@ import org.springframework.kafka.test.utils.KafkaTestUtils
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = ["sentinel.delivery.default-channels=telegram"],
+    properties = ["sentinel.evaluation.routing.default-channels=telegram"],
     classes = [EvaluationKafkaIntegrationTests.TestApplication::class],
 )
 @EmbeddedKafka(

@@ -50,6 +50,26 @@ sentinel:
         signature-validation-enabled: ${SENTINEL_SENTRY_WEBHOOK_SIGNATURE_VALIDATION_ENABLED:false}
         secret: ${SENTINEL_SENTRY_WEBHOOK_SECRET:}
         max-timestamp-skew: ${SENTINEL_SENTRY_WEBHOOK_MAX_TIMESTAMP_SKEW:PT5M}
+  evaluation:
+    minimum-confidence: ${SENTINEL_EVALUATION_MINIMUM_CONFIDENCE:0.5}
+    routing:
+      default-channels: []
+      severity-policies:
+        CRITICAL:
+          priority: IMMEDIATE
+        HIGH:
+          priority: IMMEDIATE
+        MEDIUM:
+          priority: BATCHED
+        LOW:
+          priority: DIGEST
+        INFO:
+          priority: DIGEST
+      category-policies:
+        analysis-failure:
+          priority: IMMEDIATE
+          prefer-result-channels: true
+          skip-minimum-confidence: true
   analysis:
     llm:
       provider: ${SENTINEL_ANALYSIS_LLM_PROVIDER:bootstrap}

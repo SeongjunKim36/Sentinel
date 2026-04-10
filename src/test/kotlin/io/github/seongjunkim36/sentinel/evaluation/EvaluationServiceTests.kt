@@ -21,6 +21,7 @@ class EvaluationServiceTests {
                     defaultChannels = listOf("telegram"),
                     telegram = TelegramDeliveryProperties(),
                 ),
+                EvaluationProperties(),
             )
 
         val evaluated =
@@ -51,6 +52,7 @@ class EvaluationServiceTests {
                     defaultChannels = listOf("slack"),
                     telegram = TelegramDeliveryProperties(),
                 ),
+                EvaluationProperties(),
             )
 
         val evaluated =
@@ -71,5 +73,86 @@ class EvaluationServiceTests {
         assertThat(evaluated.routing.channels).containsExactly("telegram")
         assertThat(evaluated.routing.priority).isEqualTo(RoutingPriority.IMMEDIATE)
         assertThat(evaluated.confidence).isEqualTo(1.0)
+    }
+
+    @Test
+    fun `applies category-specific channel mapping when configured`() {
+        val evaluationService =
+            EvaluationService(
+                DeliveryProperties(defaultChannels = listOf("slack")),
+                EvaluationProperties(
+                    routing =
+                        EvaluationRoutingProperties(
+                            severityPolicies = emptyMap(),
+                            categoryPolicies =
+                                mapOf(
+                                    "error" to
+                                        EvaluationRoutingPolicy(
+                                            channels = listOf("telegram", "slack"),
+                                            priority = RoutingPriority.IMMEDIATE,
+                                        ),
+                                ),
+                        ),
+                ),
+            )
+
+        val evaluated =
+            evaluationService.evaluate(
+                AnalysisResult(
+                    eventId = java.util.UUID.randomUUID(),
+                    tenantId = "tenant-alpha",
+                    category = "error",
+                    severity = Severity.LOW,
+                    confidence = 0.55,
+                    summary = "Checkout degradation",
+                    detail = AnalysisDetail(analysis = "Slow DB query"),
+                    llmMetadata = LlmMetadata(model = "stub", promptVersion = "v1"),
+                    routing = RoutingDecision(channels = listOf("slack"), priority = RoutingPriority.DIGEST),
+                ),
+            )
+
+        assertThat(evaluated.routing.channels).containsExactly("telegram", "slack")
+        assertThat(evaluated.routing.priority).isEqualTo(RoutingPriority.IMMEDIATE)
+    }
+
+    @Test
+    fun `applies severity-specific policy when category policy is absent`() {
+        val evaluationService =
+            EvaluationService(
+                DeliveryProperties(defaultChannels = listOf("slack")),
+                EvaluationProperties(
+                    routing =
+                        EvaluationRoutingProperties(
+                            severityPolicies =
+                                mapOf(
+                                    Severity.HIGH to
+                                        EvaluationRoutingPolicy(
+                                            channels = listOf("telegram"),
+                                            priority = RoutingPriority.IMMEDIATE,
+                                        ),
+                                ),
+                            categoryPolicies = emptyMap(),
+                        ),
+                ),
+            )
+
+        val evaluated =
+            evaluationService.evaluate(
+                AnalysisResult(
+                    eventId = java.util.UUID.randomUUID(),
+                    tenantId = "tenant-alpha",
+                    category = "error",
+                    severity = Severity.HIGH,
+                    confidence = 0.2,
+                    summary = "Checkout outage",
+                    detail = AnalysisDetail(analysis = "Dependency outage"),
+                    llmMetadata = LlmMetadata(model = "stub", promptVersion = "v1"),
+                    routing = RoutingDecision(channels = listOf("slack"), priority = RoutingPriority.BATCHED),
+                ),
+            )
+
+        assertThat(evaluated.routing.channels).containsExactly("telegram")
+        assertThat(evaluated.routing.priority).isEqualTo(RoutingPriority.IMMEDIATE)
+        assertThat(evaluated.confidence).isEqualTo(0.5)
     }
 }

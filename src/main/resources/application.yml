@@ -48,6 +48,17 @@ sentinel:
     llm:
       provider: ${SENTINEL_ANALYSIS_LLM_PROVIDER:bootstrap}
       prompt-version: ${SENTINEL_ANALYSIS_LLM_PROMPT_VERSION:openai-v1}
+      prompt-rollout:
+        canary-version: ${SENTINEL_ANALYSIS_LLM_PROMPT_CANARY_VERSION:}
+        canary-percentage: ${SENTINEL_ANALYSIS_LLM_PROMPT_CANARY_PERCENTAGE:0}
+        tenant-overrides: {}
+      prompt-templates:
+        - version: openai-v1
+          system-resource: classpath:prompts/openai-v1/system.txt
+          user-resource: classpath:prompts/openai-v1/user.txt
+        - version: openai-v2
+          system-resource: classpath:prompts/openai-v2/system.txt
+          user-resource: classpath:prompts/openai-v2/user.txt
       openai:
         api-base-url: ${SENTINEL_OPENAI_API_BASE_URL:https://api.openai.com}
         api-key: ${SENTINEL_OPENAI_API_KEY:}

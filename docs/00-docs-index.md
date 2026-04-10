@@ -10,6 +10,12 @@ Foundation documents define the direction, scope, and initial implementation str
 - [02. MVP Implementation Plan](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/02-mvp-implementation-plan.md)
 - [03. Project Structure Proposal](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/03-project-structure.md)
 
+## 20. Domain and Contracts
+
+Domain-level behavior and contract semantics are documented here.
+
+- [21. Analysis Prompt Versioning and Rollout](/Users/skl-wade/Wade/Sentinel/docs/20-domain/21-analysis-prompt-versioning.md)
+
 ## 30. Operations
 
 Operational runbooks, alerting standards, and observability definitions live here.
@@ -31,7 +37,7 @@ Architectural decisions that should remain traceable over time live here.
 - `30-39`: operations, observability, and security
 - `90-99`: ADRs, retrospectives, and change history
 
-At the current stage, `01 Foundation`, `30 Operations`, and `99 ADR` are in use.
+At the current stage, `01 Foundation`, `20 Domain and Contracts`, `30 Operations`, and `99 ADR` are in use.
 
 ## Local-Only Notes
 
@@ -51,4 +57,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: switchable LLM provider mode (`bootstrap` and `openai`)
 - Done: Prometheus + Grafana local dashboard provisioning for stage metrics and replay-failure-alert MTTR
 - Done: Prometheus alerting rules and replay recovery SLO thresholds
-- Next: prompt/template externalization with versioned rollout controls
+- Done: prompt/template externalization with versioned rollout controls
+- Next: source webhook signature validation and secret-hardening baseline

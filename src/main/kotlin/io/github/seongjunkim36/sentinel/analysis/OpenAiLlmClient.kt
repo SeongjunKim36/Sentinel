@@ -24,6 +24,7 @@ import tools.jackson.databind.json.JsonMapper
 )
 class OpenAiLlmClient(
     private val openAiChatCompletionClient: OpenAiChatCompletionClient,
+    private val openAiPromptTemplateService: OpenAiPromptTemplateService,
     private val analysisProperties: AnalysisProperties,
     private val jsonMapper: JsonMapper,
 ) : LlmClient {
@@ -32,6 +33,7 @@ class OpenAiLlmClient(
     override fun analyze(classifiedEvent: ClassifiedEvent): LlmAnalysisResponse {
         val openAi = analysisProperties.llm.openai
         val startedAt = Instant.now()
+        val resolvedPrompt = openAiPromptTemplateService.resolve(classifiedEvent)
 
         try {
             val completionResponse =
@@ -44,11 +46,11 @@ class OpenAiLlmClient(
                             listOf(
                                 OpenAiMessage(
                                     role = "system",
-                                    content = systemPrompt(),
+                                    content = resolvedPrompt.systemPrompt,
                                 ),
                                 OpenAiMessage(
                                     role = "user",
-                                    content = userPrompt(classifiedEvent),
+                                    content = resolvedPrompt.userPrompt,
                                 ),
                             ),
                     ),
@@ -76,7 +78,7 @@ class OpenAiLlmClient(
                 severity = parsed.severity,
                 confidence = parsed.confidence,
                 model = completionResponse.model ?: openAi.model,
-                promptVersion = analysisProperties.llm.promptVersion,
+                promptVersion = resolvedPrompt.version,
                 tokenUsage =
                     TokenUsage(
                         input = usage?.promptTokens ?: 0,
@@ -94,31 +96,6 @@ class OpenAiLlmClient(
             throw IllegalStateException("OpenAI analysis request failed", exception)
         }
     }
-
-    private fun systemPrompt(): String =
-        """
-        You are Sentinel's incident analysis engine.
-        Return ONLY valid JSON with keys:
-        - summary: concise summary
-        - analysis: root-cause oriented analysis
-        - actionItems: array of concrete next actions
-        - severity: one of CRITICAL,HIGH,MEDIUM,LOW,INFO
-        - confidence: number between 0 and 1
-        """.trimIndent()
-
-    private fun userPrompt(classifiedEvent: ClassifiedEvent): String =
-        """
-        Analyze this classified event and produce JSON output.
-        
-        tenantId: ${classifiedEvent.event.tenantId}
-        sourceType: ${classifiedEvent.event.sourceType}
-        sourceId: ${classifiedEvent.event.sourceId}
-        category: ${classifiedEvent.category}
-        analyzable: ${classifiedEvent.analyzable}
-        filterReason: ${classifiedEvent.filterReason ?: "none"}
-        tags: ${classifiedEvent.tags.sorted().joinToString(",").ifBlank { "none" }}
-        payload: ${jsonMapper.writeValueAsString(classifiedEvent.event.payload)}
-        """.trimIndent()
 
     private fun parseStructuredContent(content: String): ParsedLlmOutput {
         val root = jsonMapper.readTree(content)

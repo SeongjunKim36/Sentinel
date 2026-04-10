@@ -141,6 +141,21 @@ export SENTINEL_OPENAI_API_BASE_URL=https://api.openai.com
 export SENTINEL_OPENAI_TEMPERATURE=0.2
 ```
 
+Prompt templates are externalized under:
+
+- `src/main/resources/prompts/openai-v1/`
+- `src/main/resources/prompts/openai-v2/`
+
+Prompt rollout controls (default + canary) are configurable:
+
+```bash
+export SENTINEL_ANALYSIS_LLM_PROMPT_VERSION=openai-v1
+export SENTINEL_ANALYSIS_LLM_PROMPT_CANARY_VERSION=openai-v2
+export SENTINEL_ANALYSIS_LLM_PROMPT_CANARY_PERCENTAGE=10
+```
+
+Tenant-specific overrides can be defined in `application.yml` with `sentinel.analysis.llm.prompt-rollout.tenant-overrides`.
+
 ## Local Demo
 
 You can exercise the full webhook-to-delivery path locally with the included sample payload.

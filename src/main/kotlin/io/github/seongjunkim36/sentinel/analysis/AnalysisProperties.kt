@@ -24,7 +24,33 @@ data class AnalysisFailureRoutingProperties(
 data class AnalysisLlmProperties(
     val provider: String = "bootstrap",
     val promptVersion: String = "openai-v1",
+    val promptRollout: AnalysisPromptRolloutProperties = AnalysisPromptRolloutProperties(),
+    val promptTemplates: List<AnalysisPromptTemplateProperties> =
+        listOf(
+            AnalysisPromptTemplateProperties(
+                version = "openai-v1",
+                systemResource = "classpath:prompts/openai-v1/system.txt",
+                userResource = "classpath:prompts/openai-v1/user.txt",
+            ),
+            AnalysisPromptTemplateProperties(
+                version = "openai-v2",
+                systemResource = "classpath:prompts/openai-v2/system.txt",
+                userResource = "classpath:prompts/openai-v2/user.txt",
+            ),
+        ),
     val openai: OpenAiLlmProperties = OpenAiLlmProperties(),
+)
+
+data class AnalysisPromptRolloutProperties(
+    val canaryVersion: String = "",
+    val canaryPercentage: Int = 0,
+    val tenantOverrides: Map<String, String> = emptyMap(),
+)
+
+data class AnalysisPromptTemplateProperties(
+    val version: String,
+    val systemResource: String,
+    val userResource: String,
 )
 
 data class OpenAiLlmProperties(

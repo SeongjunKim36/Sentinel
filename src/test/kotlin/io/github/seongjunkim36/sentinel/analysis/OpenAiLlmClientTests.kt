@@ -6,6 +6,7 @@ import io.github.seongjunkim36.sentinel.shared.EventMetadata
 import io.github.seongjunkim36.sentinel.shared.Severity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.core.io.DefaultResourceLoader
 import tools.jackson.databind.json.JsonMapper
 
 class OpenAiLlmClientTests {
@@ -36,11 +37,20 @@ class OpenAiLlmClientTests {
                 usage = OpenAiUsage(promptTokens = 120, completionTokens = 64),
             )
 
+        val analysisProperties = analysisProperties()
+        val jsonMapper = JsonMapper.builder().findAndAddModules().build()
+        val promptTemplateService =
+            OpenAiPromptTemplateService(
+                analysisProperties = analysisProperties,
+                resourceLoader = DefaultResourceLoader(),
+                jsonMapper = jsonMapper,
+            )
         val client =
             OpenAiLlmClient(
                 openAiChatCompletionClient = chatClient,
-                analysisProperties = analysisProperties(),
-                jsonMapper = JsonMapper.builder().findAndAddModules().build(),
+                openAiPromptTemplateService = promptTemplateService,
+                analysisProperties = analysisProperties,
+                jsonMapper = jsonMapper,
             )
 
         val result = client.analyze(sampleClassifiedEvent())
@@ -87,11 +97,20 @@ class OpenAiLlmClientTests {
                     ),
             )
 
+        val analysisProperties = analysisProperties()
+        val jsonMapper = JsonMapper.builder().findAndAddModules().build()
+        val promptTemplateService =
+            OpenAiPromptTemplateService(
+                analysisProperties = analysisProperties,
+                resourceLoader = DefaultResourceLoader(),
+                jsonMapper = jsonMapper,
+            )
         val client =
             OpenAiLlmClient(
                 openAiChatCompletionClient = chatClient,
-                analysisProperties = analysisProperties(),
-                jsonMapper = JsonMapper.builder().findAndAddModules().build(),
+                openAiPromptTemplateService = promptTemplateService,
+                analysisProperties = analysisProperties,
+                jsonMapper = jsonMapper,
             )
 
         val result = client.analyze(sampleClassifiedEvent())

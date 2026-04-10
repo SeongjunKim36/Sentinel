@@ -1,0 +1,16 @@
+Analyze this classified event and produce strict JSON output.
+
+eventId: {{eventId}}
+tenantId: {{tenantId}}
+sourceType: {{sourceType}}
+sourceId: {{sourceId}}
+category: {{category}}
+analyzable: {{analyzable}}
+filterReason: {{filterReason}}
+tags: {{tags}}
+payload: {{payloadJson}}
+
+Prioritize:
+1. Most likely trigger and propagation path
+2. Immediate mitigation actions
+3. Operator follow-up checks

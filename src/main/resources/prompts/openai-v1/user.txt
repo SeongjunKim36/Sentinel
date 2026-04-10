@@ -1,0 +1,11 @@
+Analyze this classified event and produce JSON output.
+
+eventId: {{eventId}}
+tenantId: {{tenantId}}
+sourceType: {{sourceType}}
+sourceId: {{sourceId}}
+category: {{category}}
+analyzable: {{analyzable}}
+filterReason: {{filterReason}}
+tags: {{tags}}
+payload: {{payloadJson}}

@@ -10,6 +10,12 @@ Foundation documents define the direction, scope, and initial implementation str
 - [02. MVP Implementation Plan](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/02-mvp-implementation-plan.md)
 - [03. Project Structure Proposal](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/03-project-structure.md)
 
+## 30. Operations
+
+Operational runbooks, alerting standards, and observability definitions live here.
+
+- [31. Replay Recovery SLO and Alerting](/Users/skl-wade/Wade/Sentinel/docs/30-operations/31-replay-recovery-slo-alerting.md)
+
 ## 99. ADR
 
 Architectural decisions that should remain traceable over time live here.
@@ -25,7 +31,7 @@ Architectural decisions that should remain traceable over time live here.
 - `30-39`: operations, observability, and security
 - `90-99`: ADRs, retrospectives, and change history
 
-At the current stage only `01 Foundation` and `99 ADR` are in use.
+At the current stage, `01 Foundation`, `30 Operations`, and `99 ADR` are in use.
 
 ## Local-Only Notes
 
@@ -44,5 +50,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: replay guardrails, replay audit trail endpoint, and replay failure threshold alerts
 - Done: switchable LLM provider mode (`bootstrap` and `openai`)
 - Done: Prometheus + Grafana local dashboard provisioning for stage metrics and replay-failure-alert MTTR
-- Next: Prometheus alerting rules and SLO thresholds for replay recovery
+- Done: Prometheus alerting rules and replay recovery SLO thresholds
 - Next: prompt/template externalization with versioned rollout controls

@@ -1,0 +1,77 @@
+groups:
+  - name: sentinel-replay-slo-recording
+    interval: 30s
+    rules:
+      - record: sentinel:deadletter:replay:attempt_rate5m
+        expr: sum(rate(sentinel_deadletter_replay_events_total{outcome=~"replayed|replay_failed"}[5m]))
+      - record: sentinel:deadletter:replay:recovery_ratio5m
+        expr: |
+          sum(rate(sentinel_deadletter_replay_events_total{outcome="replayed"}[5m]))
+          /
+          clamp_min(
+            sum(rate(sentinel_deadletter_replay_events_total{outcome=~"replayed|replay_failed"}[5m])),
+            1
+          )
+      - record: sentinel:deadletter:replay:mttr_avg_seconds15m
+        expr: |
+          sum(rate(sentinel_deadletter_replay_mttr_seconds_sum[15m]))
+          /
+          clamp_min(sum(rate(sentinel_deadletter_replay_mttr_seconds_count[15m])), 1)
+
+  - name: sentinel-replay-slo-alerts
+    interval: 30s
+    rules:
+      - alert: SentinelReplayRecoverySloWarning
+        expr: sentinel:deadletter:replay:attempt_rate5m > 0 and sentinel:deadletter:replay:recovery_ratio5m < 0.95
+        for: 15m
+        labels:
+          severity: warning
+          service: sentinel
+          slo: replay-recovery
+        annotations:
+          summary: Replay recovery ratio below 95%
+          description: Replay recovery ratio stayed below 95% for 15m while replay attempts existed.
+
+      - alert: SentinelReplayRecoverySloCritical
+        expr: sentinel:deadletter:replay:attempt_rate5m > 0 and sentinel:deadletter:replay:recovery_ratio5m < 0.90
+        for: 30m
+        labels:
+          severity: critical
+          service: sentinel
+          slo: replay-recovery
+        annotations:
+          summary: Replay recovery ratio below 90%
+          description: Replay recovery ratio stayed below 90% for 30m while replay attempts existed.
+
+      - alert: SentinelReplayMttrSloWarning
+        expr: sentinel:deadletter:replay:attempt_rate5m > 0 and sentinel:deadletter:replay:mttr_avg_seconds15m > 300
+        for: 15m
+        labels:
+          severity: warning
+          service: sentinel
+          slo: replay-mttr
+        annotations:
+          summary: Replay MTTR average above 5 minutes
+          description: Replay MTTR 15m average is above 300 seconds for 15m.
+
+      - alert: SentinelReplayMttrSloCritical
+        expr: sentinel:deadletter:replay:attempt_rate5m > 0 and sentinel:deadletter:replay:mttr_avg_seconds15m > 900
+        for: 30m
+        labels:
+          severity: critical
+          service: sentinel
+          slo: replay-mttr
+        annotations:
+          summary: Replay MTTR average above 15 minutes
+          description: Replay MTTR 15m average is above 900 seconds for 30m.
+
+      - alert: SentinelReplayBlockedDetected
+        expr: sum(increase(sentinel_deadletter_replay_events_total{outcome="replay_blocked"}[10m])) > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: sentinel
+          slo: replay-guardrail
+        annotations:
+          summary: Replay blocked events detected
+          description: Replay blocked outcomes were detected in the last 10 minutes.

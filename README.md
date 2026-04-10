@@ -47,7 +47,7 @@ The current bootstrap implementation already includes:
 - Gradle `9.4.1` wrapper
 - Spring Modulith `2.0.5`
 - OpenTelemetry (Micrometer tracing bridge + OTLP exporter)
-- Prometheus + Grafana dashboard provisioning for local operations visibility
+- Prometheus + Grafana provisioning for local operations dashboards and replay recovery alerts
 - PostgreSQL, Redis, Kafka, and Jaeger for local infrastructure
 
 ## Documentation
@@ -161,6 +161,7 @@ Local observability endpoints from Docker Compose:
 
 - Jaeger: `http://localhost:16686`
 - Prometheus: `http://localhost:9090`
+- Prometheus Alerts: `http://localhost:9090/alerts`
 - Grafana: `http://localhost:3000` (`admin` / `sentinel`)
 
 ## OpenTelemetry Tracing
@@ -182,7 +183,7 @@ Sentinel now emits stage-level business metrics for ingestion, classification fi
 
 - `sentinel.pipeline.ingestion.events` with tag `source_type`
 - `sentinel.pipeline.classification.events` with tags `category`, `outcome`, `filter_reason`
-- `sentinel.pipeline.delivery.attempts` with tags `channel`, `outcome`, `failure_type`
+- `sentinel.pipeline.delivery.attempts` with tags `tenant_id`, `channel`, `category`, `outcome`, `failure_type`
 - `sentinel.pipeline.delivery.fanout` summary for number of target channels per routed result
 - `sentinel.deadletter.replay.events` counter tagged by `tenant_id`, `channel`, and replay `outcome`
 - `sentinel.deadletter.replay.mttr.seconds` summary for replay recovery MTTR per tenant/channel
@@ -212,6 +213,22 @@ The dashboard includes:
 - delivery attempts by tenant/channel/category/outcome
 - replay outcomes and replay failure alert delivery frequency
 - replay recovery MTTR by tenant/channel
+
+## Replay Recovery SLO Alerts
+
+Prometheus now loads replay recovery SLO recording and alerting rules from:
+
+- `docker/prometheus/rules/sentinel-replay-slo-alerts.yml`
+
+Configured SLO thresholds:
+
+- replay recovery ratio: warning below `95%`, critical below `90%`
+- replay MTTR average: warning above `300s`, critical above `900s`
+- replay blocked outcomes: warning when blocked outcomes are detected
+
+The rule loader is configured in:
+
+- `docker/prometheus/prometheus.yml` (`rule_files`)
 
 ## Delivery Attempt Audit
 

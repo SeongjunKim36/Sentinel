@@ -11,12 +11,17 @@ interface DeadLetterStore {
 
     fun findRecent(query: DeadLetterQuery = DeadLetterQuery()): List<DeadLetterRecord>
 
-    fun markReplayed(id: UUID, replayedAt: Instant = Instant.now())
+    fun markReplayed(
+        id: UUID,
+        replayedAt: Instant = Instant.now(),
+        operatorNote: String? = null,
+    )
 
     fun markReplayFailed(
         id: UUID,
         replayError: String,
         replayedAt: Instant = Instant.now(),
+        operatorNote: String? = null,
     )
 }
 
@@ -50,6 +55,7 @@ data class DeadLetterRecord(
     val createdAt: Instant,
     val lastReplayAt: Instant?,
     val lastReplayError: String?,
+    val lastReplayOperatorNote: String?,
 )
 
 data class DeadLetterQuery(

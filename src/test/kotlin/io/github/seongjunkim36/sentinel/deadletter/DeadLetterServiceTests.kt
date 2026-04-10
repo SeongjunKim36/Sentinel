@@ -72,6 +72,7 @@ class DeadLetterServiceTests {
                 createdAt = write.createdAt,
                 lastReplayAt = null,
                 lastReplayError = null,
+                lastReplayOperatorNote = null,
             )
         }
 
@@ -82,6 +83,7 @@ class DeadLetterServiceTests {
         override fun markReplayed(
             id: UUID,
             replayedAt: java.time.Instant,
+            operatorNote: String?,
         ) {
         }
 
@@ -89,6 +91,7 @@ class DeadLetterServiceTests {
             id: UUID,
             replayError: String,
             replayedAt: java.time.Instant,
+            operatorNote: String?,
         ) {
         }
     }

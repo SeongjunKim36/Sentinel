@@ -30,6 +30,7 @@ class NoOpDeadLetterStore : DeadLetterStore {
             createdAt = write.createdAt,
             lastReplayAt = null,
             lastReplayError = null,
+            lastReplayOperatorNote = null,
         )
     }
 
@@ -40,6 +41,7 @@ class NoOpDeadLetterStore : DeadLetterStore {
     override fun markReplayed(
         id: UUID,
         replayedAt: Instant,
+        operatorNote: String?,
     ) {
     }
 
@@ -47,6 +49,7 @@ class NoOpDeadLetterStore : DeadLetterStore {
         id: UUID,
         replayError: String,
         replayedAt: Instant,
+        operatorNote: String?,
     ) {
     }
 }

@@ -57,6 +57,7 @@ class JdbcDeadLetterStore(
             createdAt = write.createdAt,
             lastReplayAt = null,
             lastReplayError = null,
+            lastReplayOperatorNote = null,
         )
     }
 
@@ -77,7 +78,8 @@ class JdbcDeadLetterStore(
                 replay_count,
                 created_at,
                 last_replay_at,
-                last_replay_error
+                last_replay_error,
+                last_replay_operator_note
             from dead_letter_event
             where id = ?
             """.trimIndent(),
@@ -106,7 +108,8 @@ class JdbcDeadLetterStore(
                         replay_count,
                         created_at,
                         last_replay_at,
-                        last_replay_error
+                        last_replay_error,
+                        last_replay_operator_note
                     from dead_letter_event
                     where 1 = 1
                     """.trimIndent(),
@@ -135,6 +138,7 @@ class JdbcDeadLetterStore(
     override fun markReplayed(
         id: UUID,
         replayedAt: Instant,
+        operatorNote: String?,
     ) {
         jdbcTemplate.update(
             """
@@ -143,11 +147,13 @@ class JdbcDeadLetterStore(
                 status = ?,
                 replay_count = replay_count + 1,
                 last_replay_at = ?,
-                last_replay_error = null
+                last_replay_error = null,
+                last_replay_operator_note = ?
             where id = ?
             """.trimIndent(),
             DeadLetterStatus.REPLAYED.name,
             Timestamp.from(replayedAt),
+            operatorNote,
             id,
         )
     }
@@ -156,6 +162,7 @@ class JdbcDeadLetterStore(
         id: UUID,
         replayError: String,
         replayedAt: Instant,
+        operatorNote: String?,
     ) {
         jdbcTemplate.update(
             """
@@ -164,12 +171,14 @@ class JdbcDeadLetterStore(
                 status = ?,
                 replay_count = replay_count + 1,
                 last_replay_at = ?,
-                last_replay_error = ?
+                last_replay_error = ?,
+                last_replay_operator_note = ?
             where id = ?
             """.trimIndent(),
             DeadLetterStatus.REPLAY_FAILED.name,
             Timestamp.from(replayedAt),
             replayError,
+            operatorNote,
             id,
         )
     }
@@ -190,5 +199,6 @@ class JdbcDeadLetterStore(
             createdAt = getTimestamp("created_at").toInstant(),
             lastReplayAt = getTimestamp("last_replay_at")?.toInstant(),
             lastReplayError = getString("last_replay_error"),
+            lastReplayOperatorNote = getString("last_replay_operator_note"),
         )
 }

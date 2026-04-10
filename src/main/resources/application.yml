@@ -57,3 +57,8 @@ sentinel:
       api-base-url: ${SENTINEL_TELEGRAM_API_BASE_URL:https://api.telegram.org}
       bot-token: ${SENTINEL_TELEGRAM_BOT_TOKEN:}
       chat-id: ${SENTINEL_TELEGRAM_CHAT_ID:}
+  dead-letter:
+    replay:
+      max-replay-attempts: ${SENTINEL_DEAD_LETTER_REPLAY_MAX_REPLAY_ATTEMPTS:3}
+      cooldown: ${SENTINEL_DEAD_LETTER_REPLAY_COOLDOWN:PT5M}
+      require-operator-note: ${SENTINEL_DEAD_LETTER_REPLAY_REQUIRE_OPERATOR_NOTE:true}

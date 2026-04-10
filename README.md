@@ -142,10 +142,28 @@ Sentinel persists each channel delivery attempt (including failures and plugin-m
 
 When delivery fails, Sentinel records a dead-letter event in PostgreSQL and publishes it to Kafka topic `sentinel.dead-letter`.
 
-- Flyway migration: `V3__dead_letter_events.sql`
+- Flyway migrations: `V3__dead_letter_events.sql`, `V4__dead_letter_replay_operator_note.sql`
 - Query endpoint: `GET /api/v1/dead-letters`
 - Replay endpoint: `POST /api/v1/dead-letters/{id}/replay`
 - Replay currently supports payload type `ANALYSIS_RESULT` and republishes to `sentinel.routed-results`
+
+Replay guardrails are enabled by default.
+
+```bash
+export SENTINEL_DEAD_LETTER_REPLAY_MAX_REPLAY_ATTEMPTS=3
+export SENTINEL_DEAD_LETTER_REPLAY_COOLDOWN=PT5M
+export SENTINEL_DEAD_LETTER_REPLAY_REQUIRE_OPERATOR_NOTE=true
+```
+
+`POST /api/v1/dead-letters/{id}/replay` can include an operator note:
+
+```json
+{
+  "operatorNote": "Telegram outage recovered, replaying after verification"
+}
+```
+
+If max attempts are exhausted or cooldown is active, replay is blocked with HTTP `409 Conflict`.
 
 ## Classification Deduplication
 
@@ -177,4 +195,4 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 
 1. Replace the bootstrap `LlmClient` with a real provider integration.
 2. Add OpenTelemetry and end-to-end trace propagation.
-3. Add replay guardrails (max replay attempts, cooldowns, and operator notes).
+3. Add a dedicated replay audit trail endpoint for operator actions.

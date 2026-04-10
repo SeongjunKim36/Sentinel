@@ -13,6 +13,15 @@ class DeadLetterStoreConfiguration {
     fun jdbcDeadLetterStore(jdbcTemplate: JdbcTemplate): DeadLetterStore = JdbcDeadLetterStore(jdbcTemplate)
 
     @Bean
+    @ConditionalOnBean(JdbcTemplate::class)
+    fun jdbcDeadLetterReplayAuditStore(jdbcTemplate: JdbcTemplate): DeadLetterReplayAuditStore =
+        JdbcDeadLetterReplayAuditStore(jdbcTemplate)
+
+    @Bean
     @ConditionalOnMissingBean(DeadLetterStore::class)
     fun noOpDeadLetterStore(): DeadLetterStore = NoOpDeadLetterStore()
+
+    @Bean
+    @ConditionalOnMissingBean(DeadLetterReplayAuditStore::class)
+    fun noOpDeadLetterReplayAuditStore(): DeadLetterReplayAuditStore = NoOpDeadLetterReplayAuditStore()
 }

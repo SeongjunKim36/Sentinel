@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/dead-letters")
 class DeadLetterController(
     private val deadLetterStore: DeadLetterStore,
+    private val deadLetterReplayAuditStore: DeadLetterReplayAuditStore,
     private val deadLetterReplayService: DeadLetterReplayService,
 ) {
     @GetMapping
@@ -60,6 +61,23 @@ class DeadLetterController(
         }
 
         return ResponseEntity.ok(response)
+    }
+
+    @GetMapping("/{id}/replay-audits")
+    fun findReplayAudits(
+        @PathVariable id: UUID,
+        @RequestParam(defaultValue = "50") limit: Int,
+    ): ResponseEntity<List<DeadLetterReplayAuditRecord>> {
+        if (deadLetterStore.findById(id) == null) {
+            return ResponseEntity.notFound().build()
+        }
+
+        return ResponseEntity.ok(
+            deadLetterReplayAuditStore.findRecentByDeadLetterId(
+                deadLetterId = id,
+                limit = limit,
+            ),
+        )
     }
 }
 

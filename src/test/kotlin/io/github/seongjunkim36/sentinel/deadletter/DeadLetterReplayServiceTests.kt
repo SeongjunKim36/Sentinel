@@ -17,10 +17,12 @@ class DeadLetterReplayServiceTests {
     @Test
     fun `replays analysis result dead-letter and marks replayed`() {
         val recordStore = InMemoryDeadLetterStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore()
         val publisher = RecordingRoutedResultPublisher()
         val replayService =
             replayService(
                 recordStore = recordStore,
+                auditStore = auditStore,
                 publisher = publisher,
             )
         val jsonMapper = JsonMapper.builder().findAndAddModules().build()
@@ -69,15 +71,19 @@ class DeadLetterReplayServiceTests {
         assertThat(recordStore.records[deadLetterId]!!.replayCount).isEqualTo(1)
         assertThat(recordStore.records[deadLetterId]!!.lastReplayOperatorNote)
             .isEqualTo("retry after telegram recovery")
+        assertThat(auditStore.records).hasSize(1)
+        assertThat(auditStore.records.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAYED)
     }
 
     @Test
     fun `marks replay failed when payload cannot be parsed`() {
         val recordStore = InMemoryDeadLetterStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore()
         val publisher = RecordingRoutedResultPublisher()
         val replayService =
             replayService(
                 recordStore = recordStore,
+                auditStore = auditStore,
                 publisher = publisher,
             )
 
@@ -110,13 +116,16 @@ class DeadLetterReplayServiceTests {
         assertThat(recordStore.records[deadLetterId]!!.status).isEqualTo(DeadLetterStatus.REPLAY_FAILED)
         assertThat(recordStore.records[deadLetterId]!!.replayCount).isEqualTo(1)
         assertThat(recordStore.records[deadLetterId]!!.lastReplayOperatorNote).isEqualTo("retry to verify payload")
+        assertThat(auditStore.records).hasSize(1)
+        assertThat(auditStore.records.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAY_FAILED)
     }
 
     @Test
     fun `blocks replay when operator note is missing`() {
         val recordStore = InMemoryDeadLetterStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore()
         val publisher = RecordingRoutedResultPublisher()
-        val replayService = replayService(recordStore, publisher)
+        val replayService = replayService(recordStore, auditStore, publisher)
         val deadLetterId = UUID.randomUUID()
         recordStore.records[deadLetterId] =
             recordStore.analysisResultRecord(deadLetterId = deadLetterId)
@@ -129,13 +138,16 @@ class DeadLetterReplayServiceTests {
         assertThat(replayResult.message).contains("operator note")
         assertThat(recordStore.records[deadLetterId]!!.replayCount).isZero()
         assertThat(publisher.publishedResults).isEmpty()
+        assertThat(auditStore.records).hasSize(1)
+        assertThat(auditStore.records.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAY_BLOCKED)
     }
 
     @Test
     fun `blocks replay when max attempts is reached`() {
         val recordStore = InMemoryDeadLetterStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore()
         val publisher = RecordingRoutedResultPublisher()
-        val replayService = replayService(recordStore, publisher, maxReplayAttempts = 1)
+        val replayService = replayService(recordStore, auditStore, publisher, maxReplayAttempts = 1)
         val deadLetterId = UUID.randomUUID()
         recordStore.records[deadLetterId] =
             recordStore.analysisResultRecord(
@@ -151,13 +163,16 @@ class DeadLetterReplayServiceTests {
         assertThat(replayResult.message).contains("max replay attempts")
         assertThat(recordStore.records[deadLetterId]!!.replayCount).isEqualTo(1)
         assertThat(publisher.publishedResults).isEmpty()
+        assertThat(auditStore.records).hasSize(1)
+        assertThat(auditStore.records.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAY_BLOCKED)
     }
 
     @Test
     fun `blocks replay during cooldown`() {
         val recordStore = InMemoryDeadLetterStore()
+        val auditStore = InMemoryDeadLetterReplayAuditStore()
         val publisher = RecordingRoutedResultPublisher()
-        val replayService = replayService(recordStore, publisher, cooldown = Duration.ofMinutes(5))
+        val replayService = replayService(recordStore, auditStore, publisher, cooldown = Duration.ofMinutes(5))
         val deadLetterId = UUID.randomUUID()
         recordStore.records[deadLetterId] =
             recordStore.analysisResultRecord(
@@ -173,6 +188,8 @@ class DeadLetterReplayServiceTests {
         assertThat(replayResult.message).contains("cooldown")
         assertThat(recordStore.records[deadLetterId]!!.replayCount).isZero()
         assertThat(publisher.publishedResults).isEmpty()
+        assertThat(auditStore.records).hasSize(1)
+        assertThat(auditStore.records.single().outcome).isEqualTo(DeadLetterReplayOutcome.REPLAY_BLOCKED)
     }
 
     @Test
@@ -184,6 +201,7 @@ class DeadLetterReplayServiceTests {
 
     private fun replayService(
         recordStore: InMemoryDeadLetterStore = InMemoryDeadLetterStore(),
+        auditStore: InMemoryDeadLetterReplayAuditStore = InMemoryDeadLetterReplayAuditStore(),
         publisher: RecordingRoutedResultPublisher = RecordingRoutedResultPublisher(),
         maxReplayAttempts: Int = 3,
         cooldown: Duration = Duration.ofMinutes(5),
@@ -191,6 +209,7 @@ class DeadLetterReplayServiceTests {
     ): DeadLetterReplayService =
         DeadLetterReplayService(
             deadLetterStore = recordStore,
+            deadLetterReplayAuditStore = auditStore,
             deadLetterReplayPublisher = publisher,
             jsonMapper = JsonMapper.builder().findAndAddModules().build(),
             replayProperties =
@@ -309,5 +328,33 @@ class DeadLetterReplayServiceTests {
                     lastReplayOperatorNote = operatorNote,
                 )
         }
+    }
+
+    private class InMemoryDeadLetterReplayAuditStore : DeadLetterReplayAuditStore {
+        private var currentId = 0L
+        val records = mutableListOf<DeadLetterReplayAuditRecord>()
+
+        override fun save(write: DeadLetterReplayAuditWrite) {
+            currentId += 1
+            records +=
+                DeadLetterReplayAuditRecord(
+                    id = currentId,
+                    deadLetterId = write.deadLetterId,
+                    outcome = write.outcome,
+                    status = write.status,
+                    message = write.message,
+                    operatorNote = write.operatorNote,
+                    createdAt = write.createdAt,
+                )
+        }
+
+        override fun findRecentByDeadLetterId(
+            deadLetterId: UUID,
+            limit: Int,
+        ): List<DeadLetterReplayAuditRecord> =
+            records
+                .asReversed()
+                .filter { it.deadLetterId == deadLetterId }
+                .take(limit.coerceAtLeast(1))
     }
 }

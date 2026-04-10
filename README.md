@@ -175,9 +175,10 @@ Sentinel persists each channel delivery attempt (including failures and plugin-m
 
 When delivery fails, Sentinel records a dead-letter event in PostgreSQL and publishes it to Kafka topic `sentinel.dead-letter`.
 
-- Flyway migrations: `V3__dead_letter_events.sql`, `V4__dead_letter_replay_operator_note.sql`
+- Flyway migrations: `V3__dead_letter_events.sql`, `V4__dead_letter_replay_operator_note.sql`, `V5__dead_letter_replay_audits.sql`
 - Query endpoint: `GET /api/v1/dead-letters`
 - Replay endpoint: `POST /api/v1/dead-letters/{id}/replay`
+- Replay audit endpoint: `GET /api/v1/dead-letters/{id}/replay-audits`
 - Replay currently supports payload type `ANALYSIS_RESULT` and republishes to `sentinel.routed-results`
 
 Replay guardrails are enabled by default.
@@ -228,4 +229,4 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 
 1. Replace the bootstrap `LlmClient` with a real provider integration.
 2. Add stage-level custom business metrics dashboards (ingestion/filtering/delivery outcomes).
-3. Add a dedicated replay audit trail endpoint for operator actions.
+3. Add alerting/notifications on repeated replay failures by channel and tenant.

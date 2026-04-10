@@ -11,6 +11,7 @@ import tools.jackson.databind.json.JsonMapper
 @Service
 class DeadLetterReplayService(
     private val deadLetterStore: DeadLetterStore,
+    private val deadLetterReplayAuditStore: DeadLetterReplayAuditStore,
     private val deadLetterReplayPublisher: DeadLetterReplayPublisher,
     private val jsonMapper: JsonMapper,
     private val replayProperties: DeadLetterReplayProperties,
@@ -26,34 +27,34 @@ class DeadLetterReplayService(
         val cooldown = replayProperties.cooldown.coerceAtLeast(Duration.ZERO)
 
         if (replayProperties.requireOperatorNote && normalizedOperatorNote == null) {
-            return DeadLetterReplayResult(
+            return saveAuditAndBuildResult(
                 id = id,
-                replayed = false,
                 status = record.status,
                 outcome = DeadLetterReplayOutcome.REPLAY_BLOCKED,
                 message = "Replay requires an operator note",
+                operatorNote = normalizedOperatorNote,
             )
         }
 
         if (record.replayCount >= maxReplayAttempts) {
-            return DeadLetterReplayResult(
+            return saveAuditAndBuildResult(
                 id = id,
-                replayed = false,
                 status = record.status,
                 outcome = DeadLetterReplayOutcome.REPLAY_BLOCKED,
                 message = "Replay blocked: max replay attempts reached ($maxReplayAttempts)",
+                operatorNote = normalizedOperatorNote,
             )
         }
 
         val nextReplayAt = record.lastReplayAt?.plus(cooldown)
         if (nextReplayAt != null && nextReplayAt.isAfter(now)) {
             val remainingSeconds = Duration.between(now, nextReplayAt).seconds.coerceAtLeast(1)
-            return DeadLetterReplayResult(
+            return saveAuditAndBuildResult(
                 id = id,
-                replayed = false,
                 status = record.status,
                 outcome = DeadLetterReplayOutcome.REPLAY_BLOCKED,
                 message = "Replay blocked: cooldown active for ${remainingSeconds}s",
+                operatorNote = normalizedOperatorNote,
             )
         }
 
@@ -67,12 +68,12 @@ class DeadLetterReplayService(
                         replayedAt = now,
                         operatorNote = normalizedOperatorNote,
                     )
-                    DeadLetterReplayResult(
+                    saveAuditAndBuildResult(
                         id = id,
-                        replayed = true,
                         status = DeadLetterStatus.REPLAYED,
                         outcome = DeadLetterReplayOutcome.REPLAYED,
                         message = "Replay published to routed results topic",
+                        operatorNote = normalizedOperatorNote,
                     )
                 }
             }
@@ -85,14 +86,40 @@ class DeadLetterReplayService(
                 operatorNote = normalizedOperatorNote,
             )
 
-            DeadLetterReplayResult(
+            saveAuditAndBuildResult(
                 id = id,
-                replayed = false,
                 status = DeadLetterStatus.REPLAY_FAILED,
                 outcome = DeadLetterReplayOutcome.REPLAY_FAILED,
                 message = errorMessage,
+                operatorNote = normalizedOperatorNote,
             )
         }
+    }
+
+    private fun saveAuditAndBuildResult(
+        id: UUID,
+        status: DeadLetterStatus,
+        outcome: DeadLetterReplayOutcome,
+        message: String,
+        operatorNote: String?,
+    ): DeadLetterReplayResult {
+        deadLetterReplayAuditStore.save(
+            DeadLetterReplayAuditWrite(
+                deadLetterId = id,
+                outcome = outcome,
+                status = status,
+                message = message,
+                operatorNote = operatorNote,
+            ),
+        )
+
+        return DeadLetterReplayResult(
+            id = id,
+            replayed = outcome == DeadLetterReplayOutcome.REPLAYED,
+            status = status,
+            outcome = outcome,
+            message = message,
+        )
     }
 }
 

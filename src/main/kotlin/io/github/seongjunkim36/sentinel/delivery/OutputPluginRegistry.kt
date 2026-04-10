@@ -10,4 +10,6 @@ class OutputPluginRegistry(
     private val pluginsByType = plugins.associateBy { it.type }
 
     fun find(type: String): OutputPlugin? = pluginsByType[type]
+
+    fun registeredTypes(): Set<String> = pluginsByType.keys
 }

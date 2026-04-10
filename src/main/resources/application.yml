@@ -32,6 +32,9 @@ management:
     health:
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState,deliveryPlugins
   tracing:
     sampling:
       probability: ${SENTINEL_TRACING_SAMPLING_PROBABILITY:1.0}

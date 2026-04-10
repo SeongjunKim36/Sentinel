@@ -293,6 +293,15 @@ Sentinel persists each channel delivery attempt (including failures and plugin-m
 - Query endpoint: `GET /api/v1/delivery-attempts`
 - Supported filters: `eventId`, `tenantId`, `channel`, `success`, `limit`
 
+## Delivery Readiness
+
+Sentinel exposes delivery-plugin readiness for operations checks.
+
+- API endpoint: `GET /api/v1/delivery/health`
+- Actuator readiness: `GET /actuator/health/readiness`
+
+Readiness is `DOWN` when any required default channel in `sentinel.delivery.default-channels` is missing a registered plugin or required channel configuration.
+
 ## Dead-Letter Handling and Replay
 
 When delivery fails, Sentinel records a dead-letter event in PostgreSQL and publishes it to Kafka topic `sentinel.dead-letter`.

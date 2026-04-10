@@ -44,6 +44,7 @@ class DeadLetterService(
                     sourceTopic = persisted.sourceTopic,
                     tenantId = persisted.tenantId,
                     eventId = persisted.eventId,
+                    traceId = result.traceId,
                     channel = persisted.channel,
                     reason = persisted.reason,
                     payloadType = persisted.payloadType,

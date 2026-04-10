@@ -19,6 +19,12 @@ class SentrySourcePlugin(
         tenantId: String,
         headers: Map<String, String>,
     ): Event {
+        val traceId =
+            headers["x-sentinel-trace-id"]?.ifBlank { null }
+                ?: headers["traceparent"]
+                    ?.split("-")
+                    ?.getOrNull(1)
+                    ?.takeIf { it.isNotBlank() }
         val sourceId = rawPayload.path("event_id").toString().trim('"').ifBlank { "unknown-sentry-event" }
         val normalizedPayload =
             jsonMapper.convertValue(
@@ -34,6 +40,7 @@ class SentrySourcePlugin(
             metadata = EventMetadata(
                 sourceVersion = headers["sentry-hook-version"] ?: "unknown",
                 headers = headers,
+                traceId = traceId,
             ),
         )
     }

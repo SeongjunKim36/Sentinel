@@ -1,8 +1,11 @@
 package io.github.seongjunkim36.sentinel.ingestion.api
 
+import io.micrometer.tracing.Tracer
 import io.github.seongjunkim36.sentinel.ingestion.application.WebhookIntakeService
 import jakarta.servlet.http.HttpServletRequest
 import java.util.Collections
+import java.util.UUID
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -16,6 +19,7 @@ import tools.jackson.databind.JsonNode
 @RequestMapping("/api/v1/webhooks")
 class WebhookController(
     private val webhookIntakeService: WebhookIntakeService,
+    private val tracerProvider: ObjectProvider<Tracer>,
 ) {
     @PostMapping("/{sourceType}")
     fun receiveWebhook(
@@ -24,11 +28,17 @@ class WebhookController(
         @RequestBody payload: JsonNode,
         request: HttpServletRequest,
     ): ResponseEntity<Map<String, Any>> {
+        val traceId = currentTraceId()
+        val requestHeaders =
+            Collections.list(request.headerNames).associate { headerName ->
+                headerName.lowercase() to (request.getHeader(headerName) ?: "")
+            } + ("x-sentinel-trace-id" to traceId)
+
         val normalizedEvent = webhookIntakeService.acceptWebhook(
             sourceType = sourceType,
             tenantId = tenantId,
             payload = payload,
-            headers = Collections.list(request.headerNames).associateWith { request.getHeader(it) ?: "" },
+            headers = requestHeaders,
         )
 
         return ResponseEntity.accepted().body(
@@ -37,7 +47,13 @@ class WebhookController(
                 "eventId" to normalizedEvent.id.toString(),
                 "sourceType" to normalizedEvent.sourceType,
                 "tenantId" to normalizedEvent.tenantId,
+                "traceId" to traceId,
             ),
         )
+    }
+
+    private fun currentTraceId(): String {
+        val currentTraceId = tracerProvider.getIfAvailable()?.currentSpan()?.context()?.traceId()
+        return currentTraceId ?: UUID.randomUUID().toString().replace("-", "")
     }
 }

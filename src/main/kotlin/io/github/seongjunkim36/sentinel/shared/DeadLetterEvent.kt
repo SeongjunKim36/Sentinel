@@ -9,6 +9,7 @@ data class DeadLetterEvent(
     val sourceTopic: String,
     val tenantId: String,
     val eventId: UUID,
+    val traceId: String? = null,
     val channel: String? = null,
     val reason: String,
     val payloadType: DeadLetterPayloadType,

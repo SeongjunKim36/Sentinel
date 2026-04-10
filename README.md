@@ -30,6 +30,7 @@ The current bootstrap implementation already includes:
 - preservation of explicit Telegram routing for `analysis-failure` alerts
 - publication of routed results to `sentinel.routed-results`
 - a `delivery` consumer that dispatches routed results to output plugins
+- end-to-end trace propagation across HTTP and Kafka with OpenTelemetry
 - persistence of every delivery attempt (success/failure) to PostgreSQL for auditability
 - dead-letter persistence and Kafka publication for failed delivery attempts
 - replay API for dead-letter events back into the routed-results topic
@@ -44,7 +45,8 @@ The current bootstrap implementation already includes:
 - Kotlin `2.2.21`
 - Gradle `9.4.1` wrapper
 - Spring Modulith `2.0.5`
-- PostgreSQL, Redis, and Kafka for local infrastructure
+- OpenTelemetry (Micrometer tracing bridge + OTLP exporter)
+- PostgreSQL, Redis, Kafka, and Jaeger for local infrastructure
 
 ## Documentation
 
@@ -130,6 +132,19 @@ docker compose -f docker/compose.yml up -d
 
 The sample request body lives at `samples/sentry/checkout-timeout.json`.
 
+## OpenTelemetry Tracing
+
+Sentinel exports traces via OTLP and propagates trace context through Kafka topics.
+
+```bash
+export SENTINEL_TRACING_SAMPLING_PROBABILITY=1.0
+export SENTINEL_OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+```
+
+With `docker compose -f docker/compose.yml up -d`, Jaeger UI is available at `http://localhost:16686`.
+
+The webhook response now includes a `traceId`, and the same trace ID is carried into normalized event metadata for end-to-end correlation.
+
 ## Delivery Attempt Audit
 
 Sentinel persists each channel delivery attempt (including failures and plugin-missing cases) in PostgreSQL table `delivery_attempt`.
@@ -194,5 +209,5 @@ When retries are exhausted, Sentinel publishes a critical `analysis-failure` res
 ## Suggested Next Steps
 
 1. Replace the bootstrap `LlmClient` with a real provider integration.
-2. Add OpenTelemetry and end-to-end trace propagation.
+2. Add stage-level custom business metrics dashboards (ingestion/filtering/delivery outcomes).
 3. Add a dedicated replay audit trail endpoint for operator actions.

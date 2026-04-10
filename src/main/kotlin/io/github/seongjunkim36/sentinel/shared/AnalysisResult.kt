@@ -7,6 +7,7 @@ data class AnalysisResult(
     val id: UUID = UUID.randomUUID(),
     val eventId: UUID,
     val tenantId: String,
+    val traceId: String? = null,
     val category: String,
     val severity: Severity,
     val confidence: Double,

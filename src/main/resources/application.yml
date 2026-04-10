@@ -13,6 +13,10 @@ spring:
     bootstrap-servers: ${SENTINEL_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     admin:
       auto-create: true
+    template:
+      observation-enabled: true
+    listener:
+      observation-enabled: true
     consumer:
       auto-offset-reset: earliest
       group-id: sentinel-bootstrap
@@ -28,10 +32,16 @@ management:
     health:
       probes:
         enabled: true
+  tracing:
+    sampling:
+      probability: ${SENTINEL_TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${SENTINEL_OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [traceId=%X{traceId:-},spanId=%X{spanId:-}] %logger - %msg%n"
 
 sentinel:
   analysis:

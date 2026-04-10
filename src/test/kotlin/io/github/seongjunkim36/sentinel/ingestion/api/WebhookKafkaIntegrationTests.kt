@@ -4,6 +4,7 @@ import io.github.seongjunkim36.sentinel.SentinelApplication
 import io.github.seongjunkim36.sentinel.SentinelTopics
 import io.github.seongjunkim36.sentinel.shared.Event
 import java.time.Duration
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.assertj.core.api.Assertions.assertThat
@@ -74,6 +75,7 @@ class WebhookKafkaIntegrationTests {
                     jsonPath("$.accepted") { value(true) }
                     jsonPath("$.sourceType") { value("sentry") }
                     jsonPath("$.tenantId") { value("tenant-alpha") }
+                    jsonPath("$.traceId") { isNotEmpty() }
                 }
 
             val record = KafkaTestUtils.getSingleRecord(it, SentinelTopics.RAW_EVENTS, Duration.ofSeconds(10))
@@ -83,7 +85,19 @@ class WebhookKafkaIntegrationTests {
             assertThat(record.value().sourceId).isEqualTo("evt-123")
             assertThat(record.value().tenantId).isEqualTo("tenant-alpha")
             assertThat(record.value().metadata.sourceVersion).isEqualTo("v1")
+            assertThat(record.value().metadata.traceId).isNotBlank()
+            assertThat(record.propagatedTraceId()).isEqualTo(record.value().metadata.traceId)
         }
+    }
+
+    private fun ConsumerRecord<String, Event>.propagatedTraceId(): String? {
+        headers().lastHeader("x-sentinel-trace-id")?.let { header ->
+            return header.value().toString(Charsets.UTF_8)
+        }
+
+        val traceparentHeader = headers().lastHeader("traceparent") ?: return null
+        val traceparent = traceparentHeader.value().toString(Charsets.UTF_8)
+        return traceparent.split("-").getOrNull(1)
     }
 
     @SpringBootApplication(

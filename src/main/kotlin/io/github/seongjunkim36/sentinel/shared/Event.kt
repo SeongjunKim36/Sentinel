@@ -16,4 +16,5 @@ data class EventMetadata(
     val receivedAt: Instant = Instant.now(),
     val sourceVersion: String,
     val headers: Map<String, String> = emptyMap(),
+    val traceId: String? = null,
 )

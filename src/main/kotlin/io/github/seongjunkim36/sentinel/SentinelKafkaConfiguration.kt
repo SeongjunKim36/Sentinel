@@ -121,27 +121,27 @@ class SentinelKafkaConfiguration {
     @Bean
     fun eventKafkaTemplate(
         eventProducerFactory: ProducerFactory<String, Event>,
-    ): KafkaTemplate<String, Event> = KafkaTemplate(eventProducerFactory)
+    ): KafkaTemplate<String, Event> = observedKafkaTemplate(eventProducerFactory)
 
     @Bean
     fun classifiedEventKafkaTemplate(
         classifiedEventProducerFactory: ProducerFactory<String, ClassifiedEvent>,
-    ): KafkaTemplate<String, ClassifiedEvent> = KafkaTemplate(classifiedEventProducerFactory)
+    ): KafkaTemplate<String, ClassifiedEvent> = observedKafkaTemplate(classifiedEventProducerFactory)
 
     @Bean
     fun analysisResultKafkaTemplate(
         analysisResultProducerFactory: ProducerFactory<String, AnalysisResult>,
-    ): KafkaTemplate<String, AnalysisResult> = KafkaTemplate(analysisResultProducerFactory)
+    ): KafkaTemplate<String, AnalysisResult> = observedKafkaTemplate(analysisResultProducerFactory)
 
     @Bean
     fun routedResultKafkaTemplate(
         routedResultProducerFactory: ProducerFactory<String, AnalysisResult>,
-    ): KafkaTemplate<String, AnalysisResult> = KafkaTemplate(routedResultProducerFactory)
+    ): KafkaTemplate<String, AnalysisResult> = observedKafkaTemplate(routedResultProducerFactory)
 
     @Bean
     fun deadLetterEventKafkaTemplate(
         deadLetterEventProducerFactory: ProducerFactory<String, DeadLetterEvent>,
-    ): KafkaTemplate<String, DeadLetterEvent> = KafkaTemplate(deadLetterEventProducerFactory)
+    ): KafkaTemplate<String, DeadLetterEvent> = observedKafkaTemplate(deadLetterEventProducerFactory)
 
     @Bean
     fun eventKafkaListenerContainerFactory(
@@ -208,5 +208,13 @@ class SentinelKafkaConfiguration {
     ): ConcurrentKafkaListenerContainerFactory<String, T> =
         ConcurrentKafkaListenerContainerFactory<String, T>().apply {
             setConsumerFactory(consumerFactory)
+            containerProperties.isObservationEnabled = true
+        }
+
+    private fun <T : Any> observedKafkaTemplate(
+        producerFactory: ProducerFactory<String, T>,
+    ): KafkaTemplate<String, T> =
+        KafkaTemplate(producerFactory).apply {
+            setObservationEnabled(true)
         }
 }

@@ -37,6 +37,7 @@ class AnalysisService(
         return AnalysisResult(
             eventId = classifiedEvent.event.id,
             tenantId = classifiedEvent.event.tenantId,
+            traceId = classifiedEvent.event.metadata.traceId,
             category = ResultCategories.ANALYSIS_FAILURE,
             severity = Severity.CRITICAL,
             confidence = 1.0,
@@ -104,6 +105,7 @@ class AnalysisService(
         AnalysisResult(
             eventId = classifiedEvent.event.id,
             tenantId = classifiedEvent.event.tenantId,
+            traceId = classifiedEvent.event.metadata.traceId,
             category = classifiedEvent.category,
             severity = llmResponse.severity,
             confidence = llmResponse.confidence,

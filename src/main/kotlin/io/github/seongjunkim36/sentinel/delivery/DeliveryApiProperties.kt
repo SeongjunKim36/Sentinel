@@ -19,4 +19,11 @@ data class DeliveryAttemptQueryRateLimitProperties(
     val enabled: Boolean = false,
     val maxRequests: Int = 60,
     val window: Duration = Duration.ofMinutes(1),
+    val distributed: DeliveryAttemptQueryDistributedRateLimitProperties = DeliveryAttemptQueryDistributedRateLimitProperties(),
+)
+
+data class DeliveryAttemptQueryDistributedRateLimitProperties(
+    val enabled: Boolean = false,
+    val keyPrefix: String = "sentinel:delivery:query-rate-limit",
+    val failOpen: Boolean = true,
 )

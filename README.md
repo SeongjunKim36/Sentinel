@@ -242,7 +242,7 @@ Sentinel now emits stage-level business metrics for ingestion, classification fi
 - `sentinel.pipeline.delivery.fanout` summary for number of target channels per routed result
 - `sentinel.deadletter.replay.events` counter tagged by `tenant_id`, `channel`, and replay `outcome`
 - `sentinel.deadletter.replay.mttr.seconds` summary for replay recovery MTTR per tenant/channel
-- `sentinel.delivery.api.query.requests` counter tagged by `tenant_id` and API guardrail `outcome` (`allowed`, `rate_limited`)
+- `sentinel.delivery.api.query.requests` counter tagged by `tenant_id` and API guardrail `outcome` (`allowed`, `rate_limited`, `degraded_allow`)
 
 Example PromQL panels:
 
@@ -314,9 +314,15 @@ Delivery-attempt query rate-limit options:
 export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_ENABLED=true
 export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_MAX_REQUESTS=60
 export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_WINDOW=PT1M
+export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_ENABLED=false
+export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_KEY_PREFIX=sentinel:delivery:query-rate-limit
+export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_FAIL_OPEN=true
 ```
 
 When delivery-attempt query rate limiting is enabled, `GET /api/v1/delivery-attempts` applies a fixed-window limit per scoped tenant and returns `429` when exceeded.
+
+When distributed rate limiting is enabled, Sentinel uses Redis counters so limits are shared across instances.
+If Redis is unavailable and `SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_FAIL_OPEN=true`, Sentinel records `degraded_allow` and allows the request.
 
 ## Delivery Readiness
 

@@ -1,6 +1,7 @@
 package io.github.seongjunkim36.sentinel.delivery
 
 import java.time.Instant
+import java.time.Duration
 import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -327,8 +328,23 @@ class DeliveryAttemptQueryControllerTests {
             deliveryAttemptQueryRateLimitService =
                 DeliveryAttemptQueryRateLimitService(
                     deliveryApiProperties = apiProperties,
+                    distributedRateLimiter = NoOpDistributedRateLimiter,
                 ),
         )
+
+    private object NoOpDistributedRateLimiter : DeliveryAttemptQueryDistributedRateLimiter {
+        override fun acquire(
+            tenantId: String,
+            maxRequests: Int,
+            window: Duration,
+            keyPrefix: String,
+            now: Instant,
+        ): DeliveryAttemptQueryDistributedRateLimitDecision =
+            DeliveryAttemptQueryDistributedRateLimitDecision(
+                allowed = true,
+                retryAfterSeconds = 0L,
+            )
+    }
 
     private class RecordingStore : DeliveryAttemptStore {
         val firstEventId = UUID.randomUUID()

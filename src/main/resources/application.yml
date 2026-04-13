@@ -124,6 +124,10 @@ sentinel:
         enabled: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_ENABLED:false}
         max-requests: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_MAX_REQUESTS:60}
         window: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_WINDOW:PT1M}
+        distributed:
+          enabled: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_ENABLED:false}
+          key-prefix: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_KEY_PREFIX:sentinel:delivery:query-rate-limit}
+          fail-open: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_FAIL_OPEN:true}
   dead-letter:
     api:
       max-query-limit: ${SENTINEL_DEAD_LETTER_API_MAX_QUERY_LIMIT:200}

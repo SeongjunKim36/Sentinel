@@ -223,6 +223,97 @@ class DeliveryAttemptQueryControllerTests {
         assertThat(response.items.single().tenantId).isEqualTo("tenant-alpha")
     }
 
+    @Test
+    fun `rejects delivery-attempt query when rate limit is exceeded within the same tenant window`() {
+        val store = RecordingStore()
+        val controller =
+            deliveryAttemptController(
+                store = store,
+                apiProperties =
+                    DeliveryApiProperties(
+                        queryRateLimit =
+                            DeliveryAttemptQueryRateLimitProperties(
+                                enabled = true,
+                                maxRequests = 1,
+                            ),
+                    ),
+            )
+        val request = MockHttpServletRequest()
+
+        controller.findRecent(
+            eventId = null,
+            tenantId = null,
+            channel = null,
+            success = null,
+            limit = 1,
+            cursor = null,
+            tenantScopeHeader = "tenant-alpha",
+            httpServletRequest = request,
+        )
+
+        val exception =
+            kotlin.runCatching {
+                controller.findRecent(
+                    eventId = null,
+                    tenantId = null,
+                    channel = null,
+                    success = null,
+                    limit = 1,
+                    cursor = null,
+                    tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = request,
+                )
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(DeliveryAttemptQueryRateLimitExceededException::class.java)
+    }
+
+    @Test
+    fun `applies delivery-attempt query rate limit independently per tenant`() {
+        val store = RecordingStore()
+        val controller =
+            deliveryAttemptController(
+                store = store,
+                apiProperties =
+                    DeliveryApiProperties(
+                        queryRateLimit =
+                            DeliveryAttemptQueryRateLimitProperties(
+                                enabled = true,
+                                maxRequests = 1,
+                            ),
+                    ),
+            )
+        val request = MockHttpServletRequest()
+
+        val alphaResponse =
+            controller.findRecent(
+                eventId = null,
+                tenantId = null,
+                channel = null,
+                success = null,
+                limit = 1,
+                cursor = null,
+                tenantScopeHeader = "tenant-alpha",
+                httpServletRequest = request,
+            )
+        val betaResponse =
+            controller.findRecent(
+                eventId = null,
+                tenantId = null,
+                channel = null,
+                success = null,
+                limit = 1,
+                cursor = null,
+                tenantScopeHeader = "tenant-beta",
+                httpServletRequest = request,
+            )
+
+        assertThat(alphaResponse.items).hasSize(1)
+        assertThat(alphaResponse.items.single().tenantId).isEqualTo("tenant-alpha")
+        assertThat(betaResponse.items).hasSize(1)
+        assertThat(betaResponse.items.single().tenantId).isEqualTo("tenant-beta")
+    }
+
     private fun deliveryAttemptController(
         store: RecordingStore,
         apiProperties: DeliveryApiProperties = DeliveryApiProperties(),
@@ -231,6 +322,10 @@ class DeliveryAttemptQueryControllerTests {
             deliveryAttemptStore = store,
             deliveryAttemptQueryAuthorizationService =
                 DeliveryAttemptQueryAuthorizationService(
+                    deliveryApiProperties = apiProperties,
+                ),
+            deliveryAttemptQueryRateLimitService =
+                DeliveryAttemptQueryRateLimitService(
                     deliveryApiProperties = apiProperties,
                 ),
         )

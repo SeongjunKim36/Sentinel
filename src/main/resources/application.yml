@@ -120,6 +120,10 @@ sentinel:
         enabled: ${SENTINEL_DELIVERY_QUERY_AUTH_ENABLED:false}
         header-name: ${SENTINEL_DELIVERY_QUERY_AUTH_HEADER_NAME:X-Sentinel-Query-Token}
         token: ${SENTINEL_DELIVERY_QUERY_AUTH_TOKEN:}
+      query-rate-limit:
+        enabled: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_ENABLED:false}
+        max-requests: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_MAX_REQUESTS:60}
+        window: ${SENTINEL_DELIVERY_QUERY_RATE_LIMIT_WINDOW:PT1M}
   dead-letter:
     api:
       max-query-limit: ${SENTINEL_DEAD_LETTER_API_MAX_QUERY_LIMIT:200}

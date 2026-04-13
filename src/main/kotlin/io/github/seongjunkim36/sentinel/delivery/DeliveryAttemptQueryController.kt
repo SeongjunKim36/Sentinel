@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException
 class DeliveryAttemptQueryController(
     private val deliveryAttemptStore: DeliveryAttemptStore,
     private val deliveryAttemptQueryAuthorizationService: DeliveryAttemptQueryAuthorizationService,
+    private val deliveryAttemptQueryRateLimitService: DeliveryAttemptQueryRateLimitService,
 ) {
     companion object {
         private const val MAX_QUERY_LIMIT = 200
@@ -38,6 +39,7 @@ class DeliveryAttemptQueryController(
         deliveryAttemptQueryAuthorizationService.authorizeQueryOrThrow(httpServletRequest)
         val scopedTenantId = normalizeTenantScope(tenantScopeHeader)
         ensureTenantFilterMatchesScope(tenantId = normalizeFilter(tenantId), scopedTenantId = scopedTenantId)
+        deliveryAttemptQueryRateLimitService.enforceRateLimitOrThrow(scopedTenantId)
         val normalizedLimit = normalizeLimit(limit)
         val records =
             deliveryAttemptStore.findRecent(

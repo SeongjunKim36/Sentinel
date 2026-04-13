@@ -29,6 +29,7 @@ Operational runbooks, alerting standards, and observability definitions live her
 - [36. Delivery-Attempt Pagination Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/36-delivery-attempt-pagination-contract.md)
 - [37. Delivery-Attempt Tenant Scope Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/37-delivery-attempt-tenant-scope-baseline.md)
 - [38. Delivery-Attempt Query Authorization Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/38-delivery-attempt-query-authorization.md)
+- [39. Delivery-Attempt Query Rate-Limit Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/39-delivery-attempt-query-rate-limit.md)
 
 ## 99. ADR
 
@@ -74,4 +75,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: delivery-attempt query pagination contract alignment
 - Done: delivery-attempt tenant scope enforcement baseline
 - Done: delivery-attempt query authorization token baseline
-- Next: delivery-attempt query rate-limit baseline
+- Done: delivery-attempt query rate-limit baseline
+- Next: delivery-attempt query distributed limiter baseline

@@ -242,6 +242,7 @@ Sentinel now emits stage-level business metrics for ingestion, classification fi
 - `sentinel.pipeline.delivery.fanout` summary for number of target channels per routed result
 - `sentinel.deadletter.replay.events` counter tagged by `tenant_id`, `channel`, and replay `outcome`
 - `sentinel.deadletter.replay.mttr.seconds` summary for replay recovery MTTR per tenant/channel
+- `sentinel.delivery.api.query.requests` counter tagged by `tenant_id` and API guardrail `outcome` (`allowed`, `rate_limited`)
 
 Example PromQL panels:
 
@@ -250,6 +251,7 @@ sum by (source_type) (rate(sentinel_pipeline_ingestion_events_total[5m]))
 sum by (outcome, filter_reason) (rate(sentinel_pipeline_classification_events_total[5m]))
 sum by (channel, outcome, failure_type) (rate(sentinel_pipeline_delivery_attempts_total[5m]))
 sum(rate(sentinel_pipeline_delivery_fanout_sum[5m])) / sum(rate(sentinel_pipeline_delivery_fanout_count[5m]))
+sum by (tenant_id, outcome) (rate(sentinel_delivery_api_query_requests_total[5m]))
 ```
 
 ## Grafana Dashboard
@@ -305,6 +307,16 @@ export SENTINEL_DELIVERY_QUERY_AUTH_TOKEN=replace-with-strong-token
 ```
 
 When delivery-attempt query authorization is enabled, `GET /api/v1/delivery-attempts` requires the configured token header and returns `401` if missing or invalid.
+
+Delivery-attempt query rate-limit options:
+
+```bash
+export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_ENABLED=true
+export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_MAX_REQUESTS=60
+export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_WINDOW=PT1M
+```
+
+When delivery-attempt query rate limiting is enabled, `GET /api/v1/delivery-attempts` applies a fixed-window limit per scoped tenant and returns `429` when exceeded.
 
 ## Delivery Readiness
 

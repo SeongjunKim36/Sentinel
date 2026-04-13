@@ -293,6 +293,8 @@ Sentinel persists each channel delivery attempt (including failures and plugin-m
 - Query endpoint: `GET /api/v1/delivery-attempts`
 - Supported filters: `eventId`, `tenantId`, `channel`, `success`, `limit`
 - Cursor pagination: request `cursor`, response `{ "items": [...], "page": { "limit": n, "hasMore": bool, "nextCursor": "..." } }`
+- Delivery-attempt API is tenant-scoped by required header `X-Sentinel-Tenant-Id`
+- If `tenantId` query is provided, it must match `X-Sentinel-Tenant-Id`
 
 ## Delivery Readiness
 

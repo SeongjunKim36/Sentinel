@@ -22,6 +22,7 @@ class DeliveryAttemptQueryControllerTests {
                 success = true,
                 limit = 25,
                 cursor = null,
+                tenantScopeHeader = " tenant-alpha ",
             )
 
         assertThat(store.lastQuery).isEqualTo(
@@ -54,11 +55,14 @@ class DeliveryAttemptQueryControllerTests {
                 success = null,
                 limit = 1,
                 cursor = null,
+                tenantScopeHeader = "tenant-alpha",
             )
 
         assertThat(first.items).hasSize(1)
+        assertThat(first.items.single().tenantId).isEqualTo("tenant-alpha")
         assertThat(first.page.hasMore).isTrue()
         assertThat(first.page.nextCursor).isNotBlank()
+        assertThat(store.lastQuery!!.tenantId).isEqualTo("tenant-alpha")
 
         val second =
             controller.findRecent(
@@ -68,6 +72,7 @@ class DeliveryAttemptQueryControllerTests {
                 success = null,
                 limit = 1,
                 cursor = first.page.nextCursor,
+                tenantScopeHeader = "tenant-alpha",
             )
 
         assertThat(second.items).hasSize(1)
@@ -90,6 +95,51 @@ class DeliveryAttemptQueryControllerTests {
                     success = null,
                     limit = 50,
                     cursor = "invalid-cursor",
+                    tenantScopeHeader = "tenant-alpha",
+                )
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(ResponseStatusException::class.java)
+        assertThat((exception as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun `rejects query tenant filter when it mismatches tenant scope header`() {
+        val store = RecordingStore()
+        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+
+        val exception =
+            kotlin.runCatching {
+                controller.findRecent(
+                    eventId = null,
+                    tenantId = "tenant-beta",
+                    channel = null,
+                    success = null,
+                    limit = 50,
+                    cursor = null,
+                    tenantScopeHeader = "tenant-alpha",
+                )
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(ResponseStatusException::class.java)
+        assertThat((exception as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun `rejects blank tenant scope header`() {
+        val store = RecordingStore()
+        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+
+        val exception =
+            kotlin.runCatching {
+                controller.findRecent(
+                    eventId = null,
+                    tenantId = null,
+                    channel = null,
+                    success = null,
+                    limit = 50,
+                    cursor = null,
+                    tenantScopeHeader = "   ",
                 )
             }.exceptionOrNull()
 
@@ -100,9 +150,21 @@ class DeliveryAttemptQueryControllerTests {
     private class RecordingStore : DeliveryAttemptStore {
         val firstEventId = UUID.randomUUID()
         private val secondEventId = UUID.randomUUID()
+        private val thirdEventId = UUID.randomUUID()
 
         private val records =
             listOf(
+                DeliveryAttemptRecord(
+                    id = 3L,
+                    analysisResultId = UUID.randomUUID(),
+                    eventId = thirdEventId,
+                    tenantId = "tenant-beta",
+                    channel = "slack",
+                    success = true,
+                    externalId = null,
+                    message = "other-tenant-newest",
+                    attemptedAt = Instant.parse("2026-04-01T00:15:00Z"),
+                ),
                 DeliveryAttemptRecord(
                     id = 2L,
                     analysisResultId = UUID.randomUUID(),

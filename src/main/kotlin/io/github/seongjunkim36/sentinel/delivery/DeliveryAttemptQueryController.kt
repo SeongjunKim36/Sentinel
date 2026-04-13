@@ -6,6 +6,7 @@ import java.util.Base64
 import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -18,6 +19,7 @@ class DeliveryAttemptQueryController(
 ) {
     companion object {
         private const val MAX_QUERY_LIMIT = 200
+        private const val TENANT_HEADER_NAME = "X-Sentinel-Tenant-Id"
     }
 
     @GetMapping
@@ -28,13 +30,16 @@ class DeliveryAttemptQueryController(
         @RequestParam(required = false) success: Boolean?,
         @RequestParam(defaultValue = "50") limit: Int,
         @RequestParam(required = false) cursor: String?,
+        @RequestHeader(name = TENANT_HEADER_NAME) tenantScopeHeader: String,
     ): DeliveryAttemptPageResponse {
+        val scopedTenantId = normalizeTenantScope(tenantScopeHeader)
+        ensureTenantFilterMatchesScope(tenantId = normalizeFilter(tenantId), scopedTenantId = scopedTenantId)
         val normalizedLimit = normalizeLimit(limit)
         val records =
             deliveryAttemptStore.findRecent(
                 DeliveryAttemptQuery(
                     eventId = eventId,
-                    tenantId = normalizeFilter(tenantId),
+                    tenantId = scopedTenantId,
                     channel = normalizeFilter(channel),
                     success = success,
                     limit = normalizedLimit + 1,
@@ -54,6 +59,32 @@ class DeliveryAttemptQueryController(
     private fun normalizeLimit(limit: Int): Int = limit.coerceIn(1, MAX_QUERY_LIMIT)
 
     private fun normalizeFilter(value: String?): String? = value?.trim()?.takeIf { it.isNotBlank() }
+
+    private fun normalizeTenantScope(tenantScopeHeader: String): String {
+        val scopedTenantId = tenantScopeHeader.trim()
+        if (scopedTenantId.isBlank()) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "$TENANT_HEADER_NAME header is required",
+            )
+        }
+        return scopedTenantId
+    }
+
+    private fun ensureTenantFilterMatchesScope(
+        tenantId: String?,
+        scopedTenantId: String,
+    ) {
+        if (tenantId == null) {
+            return
+        }
+        if (tenantId != scopedTenantId) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "tenantId filter must match scoped tenant header",
+            )
+        }
+    }
 
     private fun decodeCursor(cursor: String?): DeliveryAttemptCursor? {
         val normalizedCursor = cursor?.trim()?.takeIf { it.isNotBlank() } ?: return null

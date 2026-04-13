@@ -379,6 +379,11 @@ export SENTINEL_DEAD_LETTER_REPLAY_AUTH_TOKEN=replace-with-strong-token
 ```
 
 When replay authorization is enabled, `POST /api/v1/dead-letters/{id}/replay` requires the configured header token and returns `401` if missing or invalid.
+Replay authorization failures return `application/problem+json` with:
+
+- `scope=dead-letter-replay`
+- `errorCode=DEAD_LETTER_REPLAY_UNAUTHORIZED`
+- `type=urn:sentinel:error:dead-letter-replay-unauthorized`
 
 Dead-letter list and replay-audit endpoints support cursor pagination with a contract:
 
@@ -393,7 +398,24 @@ Dead-letter list and replay-audit endpoints support cursor pagination with a con
 }
 ```
 
-If max attempts are exhausted or cooldown is active, replay is blocked with HTTP `409 Conflict`.
+Replay target not found (including scoped-tenant mismatch) returns `404` with:
+
+- `scope=dead-letter-replay`
+- `errorCode=DEAD_LETTER_REPLAY_NOT_FOUND`
+- `type=urn:sentinel:error:dead-letter-replay-not-found`
+
+If max attempts are exhausted, cooldown is active, or operator note is required but missing, replay is blocked with HTTP `409 Conflict` and:
+
+- `scope=dead-letter-replay`
+- `errorCode=DEAD_LETTER_REPLAY_BLOCKED`
+- `type=urn:sentinel:error:dead-letter-replay-blocked`
+
+Replay input hardening failures (for example over-length `operatorNote`) return `400` with stable error codes such as:
+
+- `DEAD_LETTER_REPLAY_OPERATOR_NOTE_TOO_LONG`
+- `DEAD_LETTER_API_CURSOR_INVALID`
+- `DEAD_LETTER_API_TENANT_SCOPE_REQUIRED`
+- `DEAD_LETTER_API_TENANT_SCOPE_MISMATCH`
 
 When replay failures for the same tenant and channel reach the configured threshold within the configured window, Sentinel publishes a `replay-failure-alert` routed result to the configured alert channels.
 

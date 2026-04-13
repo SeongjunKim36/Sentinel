@@ -71,13 +71,13 @@ class DeadLetterController(
     ): ResponseEntity<Map<String, Any>> {
         val scopedTenantId = normalizeTenantScope(tenantScopeHeader)
         deadLetterReplayAuthorizationService.authorizeReplayOrThrow(httpServletRequest)
-        val deadLetterRecord = deadLetterStore.findById(id) ?: return ResponseEntity.notFound().build()
+        val deadLetterRecord = deadLetterStore.findById(id) ?: throw DeadLetterReplayNotFoundException(id)
         if (!isRecordInScope(deadLetterRecord, scopedTenantId)) {
-            return ResponseEntity.notFound().build()
+            throw DeadLetterReplayNotFoundException(id)
         }
 
         val normalizedOperatorNote = normalizeOperatorNote(request?.operatorNote)
-        val replayResult = deadLetterReplayService.replay(id = id, operatorNote = normalizedOperatorNote) ?: return ResponseEntity.notFound().build()
+        val replayResult = deadLetterReplayService.replay(id = id, operatorNote = normalizedOperatorNote) ?: throw DeadLetterReplayNotFoundException(id)
 
         val response =
             mapOf(
@@ -89,7 +89,12 @@ class DeadLetterController(
             )
 
         if (replayResult.outcome == DeadLetterReplayOutcome.REPLAY_BLOCKED) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(response)
+            throw DeadLetterReplayBlockedException(
+                deadLetterId = replayResult.id,
+                replayStatus = replayResult.status,
+                replayOutcome = replayResult.outcome,
+                message = replayResult.message,
+            )
         }
 
         return ResponseEntity.ok(response)

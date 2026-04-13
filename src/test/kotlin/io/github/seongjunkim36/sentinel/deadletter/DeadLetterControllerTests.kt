@@ -161,7 +161,7 @@ class DeadLetterControllerTests {
     }
 
     @Test
-    fun `returns not found when replay request is outside tenant scope`() {
+    fun `throws not found when replay request is outside tenant scope`() {
         val deadLetterStore = RecordingDeadLetterStore()
         val auditStore = RecordingDeadLetterReplayAuditStore()
         val deadLetterId = UUID.randomUUID()
@@ -173,14 +173,16 @@ class DeadLetterControllerTests {
         val controller = deadLetterController(deadLetterStore, auditStore)
 
         val response =
-            controller.replay(
-                id = deadLetterId,
-                request = DeadLetterReplayRequest("manual retry"),
-                tenantScopeHeader = "tenant-beta",
-                httpServletRequest = MockHttpServletRequest(),
-            )
+            kotlin.runCatching {
+                controller.replay(
+                    id = deadLetterId,
+                    request = DeadLetterReplayRequest("manual retry"),
+                    tenantScopeHeader = "tenant-beta",
+                    httpServletRequest = MockHttpServletRequest(),
+                )
+            }.exceptionOrNull()
 
-        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+        assertThat(response).isInstanceOf(DeadLetterReplayNotFoundException::class.java)
     }
 
     @Test

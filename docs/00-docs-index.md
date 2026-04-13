@@ -31,6 +31,7 @@ Operational runbooks, alerting standards, and observability definitions live her
 - [38. Delivery-Attempt Query Authorization Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/38-delivery-attempt-query-authorization.md)
 - [39. Delivery-Attempt Query Rate-Limit Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/39-delivery-attempt-query-rate-limit.md)
 - [40. Delivery-Attempt Query Distributed Limiter Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/40-delivery-attempt-query-distributed-limiter.md)
+- [41. Delivery-Attempt Query Retry-After Header Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/41-delivery-attempt-query-retry-after-header.md)
 
 ## 99. ADR
 
@@ -44,7 +45,7 @@ Architectural decisions that should remain traceable over time live here.
 - `01`: foundational project documents
 - `10-19`: architecture details
 - `20-29`: domain models and contracts
-- `30-39`: operations, observability, and security
+- `30-49`: operations, observability, and security
 - `90-99`: ADRs, retrospectives, and change history
 
 At the current stage, `01 Foundation`, `20 Domain and Contracts`, `30 Operations`, and `99 ADR` are in use.
@@ -78,4 +79,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: delivery-attempt query authorization token baseline
 - Done: delivery-attempt query rate-limit baseline
 - Done: delivery-attempt query distributed limiter baseline
-- Next: delivery-attempt query retry-after header baseline
+- Done: delivery-attempt query retry-after header baseline
+- Next: delivery-attempt query rate-limit response contract stabilization

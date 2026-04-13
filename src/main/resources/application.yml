@@ -115,6 +115,11 @@ sentinel:
       api-base-url: ${SENTINEL_TELEGRAM_API_BASE_URL:https://api.telegram.org}
       bot-token: ${SENTINEL_TELEGRAM_BOT_TOKEN:}
       chat-id: ${SENTINEL_TELEGRAM_CHAT_ID:}
+    api:
+      query-authorization:
+        enabled: ${SENTINEL_DELIVERY_QUERY_AUTH_ENABLED:false}
+        header-name: ${SENTINEL_DELIVERY_QUERY_AUTH_HEADER_NAME:X-Sentinel-Query-Token}
+        token: ${SENTINEL_DELIVERY_QUERY_AUTH_TOKEN:}
   dead-letter:
     api:
       max-query-limit: ${SENTINEL_DEAD_LETTER_API_MAX_QUERY_LIMIT:200}

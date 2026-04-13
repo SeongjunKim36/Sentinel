@@ -1,5 +1,6 @@
 package io.github.seongjunkim36.sentinel.delivery
 
+import jakarta.servlet.http.HttpServletRequest
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.Base64
@@ -16,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException
 @RequestMapping("/api/v1/delivery-attempts")
 class DeliveryAttemptQueryController(
     private val deliveryAttemptStore: DeliveryAttemptStore,
+    private val deliveryAttemptQueryAuthorizationService: DeliveryAttemptQueryAuthorizationService,
 ) {
     companion object {
         private const val MAX_QUERY_LIMIT = 200
@@ -31,7 +33,9 @@ class DeliveryAttemptQueryController(
         @RequestParam(defaultValue = "50") limit: Int,
         @RequestParam(required = false) cursor: String?,
         @RequestHeader(name = TENANT_HEADER_NAME) tenantScopeHeader: String,
+        httpServletRequest: HttpServletRequest,
     ): DeliveryAttemptPageResponse {
+        deliveryAttemptQueryAuthorizationService.authorizeQueryOrThrow(httpServletRequest)
         val scopedTenantId = normalizeTenantScope(tenantScopeHeader)
         ensureTenantFilterMatchesScope(tenantId = normalizeFilter(tenantId), scopedTenantId = scopedTenantId)
         val normalizedLimit = normalizeLimit(limit)

@@ -296,6 +296,16 @@ Sentinel persists each channel delivery attempt (including failures and plugin-m
 - Delivery-attempt API is tenant-scoped by required header `X-Sentinel-Tenant-Id`
 - If `tenantId` query is provided, it must match `X-Sentinel-Tenant-Id`
 
+Delivery-attempt query authorization options:
+
+```bash
+export SENTINEL_DELIVERY_QUERY_AUTH_ENABLED=true
+export SENTINEL_DELIVERY_QUERY_AUTH_HEADER_NAME=X-Sentinel-Query-Token
+export SENTINEL_DELIVERY_QUERY_AUTH_TOKEN=replace-with-strong-token
+```
+
+When delivery-attempt query authorization is enabled, `GET /api/v1/delivery-attempts` requires the configured token header and returns `401` if missing or invalid.
+
 ## Delivery Readiness
 
 Sentinel exposes delivery-plugin readiness for operations checks.

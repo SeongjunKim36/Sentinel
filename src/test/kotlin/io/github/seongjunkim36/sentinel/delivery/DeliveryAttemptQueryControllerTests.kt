@@ -5,13 +5,14 @@ import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
+import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.server.ResponseStatusException
 
 class DeliveryAttemptQueryControllerTests {
     @Test
     fun `delegates normalized query parameters to delivery attempt store and returns page contract`() {
         val store = RecordingStore()
-        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+        val controller = deliveryAttemptController(store)
         val eventId = store.firstEventId
 
         val response =
@@ -23,6 +24,7 @@ class DeliveryAttemptQueryControllerTests {
                 limit = 25,
                 cursor = null,
                 tenantScopeHeader = " tenant-alpha ",
+                httpServletRequest = MockHttpServletRequest(),
             )
 
         assertThat(store.lastQuery).isEqualTo(
@@ -45,7 +47,7 @@ class DeliveryAttemptQueryControllerTests {
     @Test
     fun `returns hasMore with cursor and fetches next page`() {
         val store = RecordingStore()
-        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+        val controller = deliveryAttemptController(store)
 
         val first =
             controller.findRecent(
@@ -56,6 +58,7 @@ class DeliveryAttemptQueryControllerTests {
                 limit = 1,
                 cursor = null,
                 tenantScopeHeader = "tenant-alpha",
+                httpServletRequest = MockHttpServletRequest(),
             )
 
         assertThat(first.items).hasSize(1)
@@ -73,6 +76,7 @@ class DeliveryAttemptQueryControllerTests {
                 limit = 1,
                 cursor = first.page.nextCursor,
                 tenantScopeHeader = "tenant-alpha",
+                httpServletRequest = MockHttpServletRequest(),
             )
 
         assertThat(second.items).hasSize(1)
@@ -84,7 +88,7 @@ class DeliveryAttemptQueryControllerTests {
     @Test
     fun `rejects invalid cursor`() {
         val store = RecordingStore()
-        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+        val controller = deliveryAttemptController(store)
 
         val exception =
             kotlin.runCatching {
@@ -96,6 +100,7 @@ class DeliveryAttemptQueryControllerTests {
                     limit = 50,
                     cursor = "invalid-cursor",
                     tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = MockHttpServletRequest(),
                 )
             }.exceptionOrNull()
 
@@ -106,7 +111,7 @@ class DeliveryAttemptQueryControllerTests {
     @Test
     fun `rejects query tenant filter when it mismatches tenant scope header`() {
         val store = RecordingStore()
-        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+        val controller = deliveryAttemptController(store)
 
         val exception =
             kotlin.runCatching {
@@ -118,6 +123,7 @@ class DeliveryAttemptQueryControllerTests {
                     limit = 50,
                     cursor = null,
                     tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = MockHttpServletRequest(),
                 )
             }.exceptionOrNull()
 
@@ -128,7 +134,7 @@ class DeliveryAttemptQueryControllerTests {
     @Test
     fun `rejects blank tenant scope header`() {
         val store = RecordingStore()
-        val controller = DeliveryAttemptQueryController(deliveryAttemptStore = store)
+        val controller = deliveryAttemptController(store)
 
         val exception =
             kotlin.runCatching {
@@ -140,12 +146,94 @@ class DeliveryAttemptQueryControllerTests {
                     limit = 50,
                     cursor = null,
                     tenantScopeHeader = "   ",
+                    httpServletRequest = MockHttpServletRequest(),
                 )
             }.exceptionOrNull()
 
         assertThat(exception).isInstanceOf(ResponseStatusException::class.java)
         assertThat((exception as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
     }
+
+    @Test
+    fun `rejects delivery-attempt query when authorization is enabled and token is missing`() {
+        val store = RecordingStore()
+        val controller =
+            deliveryAttemptController(
+                store = store,
+                apiProperties =
+                    DeliveryApiProperties(
+                        queryAuthorization =
+                            DeliveryAttemptQueryAuthorizationProperties(
+                                enabled = true,
+                                token = "query-secret",
+                            ),
+                    ),
+            )
+
+        val exception =
+            kotlin.runCatching {
+                controller.findRecent(
+                    eventId = null,
+                    tenantId = null,
+                    channel = null,
+                    success = null,
+                    limit = 50,
+                    cursor = null,
+                    tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = MockHttpServletRequest(),
+                )
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(DeliveryAttemptQueryUnauthorizedException::class.java)
+    }
+
+    @Test
+    fun `accepts delivery-attempt query when authorization token is valid`() {
+        val store = RecordingStore()
+        val controller =
+            deliveryAttemptController(
+                store = store,
+                apiProperties =
+                    DeliveryApiProperties(
+                        queryAuthorization =
+                            DeliveryAttemptQueryAuthorizationProperties(
+                                enabled = true,
+                                token = "query-secret",
+                            ),
+                    ),
+            )
+        val request =
+            MockHttpServletRequest().apply {
+                addHeader("X-Sentinel-Query-Token", "query-secret")
+            }
+
+        val response =
+            controller.findRecent(
+                eventId = null,
+                tenantId = null,
+                channel = null,
+                success = null,
+                limit = 1,
+                cursor = null,
+                tenantScopeHeader = "tenant-alpha",
+                httpServletRequest = request,
+            )
+
+        assertThat(response.items).hasSize(1)
+        assertThat(response.items.single().tenantId).isEqualTo("tenant-alpha")
+    }
+
+    private fun deliveryAttemptController(
+        store: RecordingStore,
+        apiProperties: DeliveryApiProperties = DeliveryApiProperties(),
+    ): DeliveryAttemptQueryController =
+        DeliveryAttemptQueryController(
+            deliveryAttemptStore = store,
+            deliveryAttemptQueryAuthorizationService =
+                DeliveryAttemptQueryAuthorizationService(
+                    deliveryApiProperties = apiProperties,
+                ),
+        )
 
     private class RecordingStore : DeliveryAttemptStore {
         val firstEventId = UUID.randomUUID()

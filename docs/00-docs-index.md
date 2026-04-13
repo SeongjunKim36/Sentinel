@@ -32,6 +32,7 @@ Operational runbooks, alerting standards, and observability definitions live her
 - [39. Delivery-Attempt Query Rate-Limit Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/39-delivery-attempt-query-rate-limit.md)
 - [40. Delivery-Attempt Query Distributed Limiter Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/40-delivery-attempt-query-distributed-limiter.md)
 - [41. Delivery-Attempt Query Retry-After Header Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/41-delivery-attempt-query-retry-after-header.md)
+- [42. Delivery-Attempt Query Rate-Limit Response Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/42-delivery-attempt-query-rate-limit-response-contract.md)
 
 ## 99. ADR
 
@@ -80,4 +81,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: delivery-attempt query rate-limit baseline
 - Done: delivery-attempt query distributed limiter baseline
 - Done: delivery-attempt query retry-after header baseline
-- Next: delivery-attempt query rate-limit response contract stabilization
+- Done: delivery-attempt query rate-limit response contract stabilization
+- Next: replay API error response contract baseline

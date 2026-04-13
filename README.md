@@ -320,10 +320,21 @@ export SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_FAIL_OPEN=true
 ```
 
 When delivery-attempt query rate limiting is enabled, `GET /api/v1/delivery-attempts` applies a fixed-window limit per scoped tenant and returns `429` when exceeded.
-Rate-limited responses include `Retry-After` header (seconds) and `retryAfterSeconds` in the response body.
+Rate-limited responses include:
+
+- `Retry-After` header (seconds)
+- `retryAfterSeconds` in response body
+- `scope=delivery-attempt-query`
+- `errorCode=DELIVERY_ATTEMPT_QUERY_RATE_LIMITED`
+- `type=urn:sentinel:error:delivery-attempt-query-rate-limited`
 
 When distributed rate limiting is enabled, Sentinel uses Redis counters so limits are shared across instances.
 If Redis is unavailable and `SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_FAIL_OPEN=true`, Sentinel records `degraded_allow` and allows the request.
+If Redis is unavailable and `SENTINEL_DELIVERY_QUERY_RATE_LIMIT_DISTRIBUTED_FAIL_OPEN=false`, Sentinel returns `503` with:
+
+- `scope=delivery-attempt-query`
+- `errorCode=DELIVERY_ATTEMPT_QUERY_RATE_LIMIT_UNAVAILABLE`
+- `type=urn:sentinel:error:delivery-attempt-query-rate-limit-unavailable`
 
 ## Delivery Readiness
 

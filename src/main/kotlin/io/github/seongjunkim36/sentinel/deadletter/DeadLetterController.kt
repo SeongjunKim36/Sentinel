@@ -108,9 +108,9 @@ class DeadLetterController(
         @RequestHeader(name = TENANT_HEADER_NAME) tenantScopeHeader: String,
     ): ResponseEntity<DeadLetterReplayAuditPageResponse> {
         val scopedTenantId = normalizeTenantScope(tenantScopeHeader)
-        val deadLetterRecord = deadLetterStore.findById(id) ?: return ResponseEntity.notFound().build()
+        val deadLetterRecord = deadLetterStore.findById(id) ?: throw DeadLetterReplayAuditsNotFoundException(id)
         if (!isRecordInScope(deadLetterRecord, scopedTenantId)) {
-            return ResponseEntity.notFound().build()
+            throw DeadLetterReplayAuditsNotFoundException(id)
         }
 
         val normalizedLimit = normalizeLimit(limit)

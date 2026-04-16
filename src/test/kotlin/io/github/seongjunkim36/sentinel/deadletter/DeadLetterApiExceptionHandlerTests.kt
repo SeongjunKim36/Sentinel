@@ -7,6 +7,7 @@ import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import tools.jackson.databind.json.JsonMapper
@@ -102,7 +103,79 @@ class DeadLetterApiExceptionHandlerTests {
         }
     }
 
+    @Test
+    fun `returns stabilized 400 contract when dead-letter list tenant scope mismatches`() {
+        val mockMvc = deadLetterMockMvc(record = sampleRecord(UUID.randomUUID()))
+
+        mockMvc.get("/api/v1/dead-letters") {
+            header("X-Sentinel-Tenant-Id", "tenant-alpha")
+            param("tenantId", "tenant-beta")
+        }.andExpect {
+            status { isBadRequest() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.title") { value("Bad Request") }
+            jsonPath("$.type") { value("urn:sentinel:error:dead-letter-list-tenant-scope-mismatch") }
+            jsonPath("$.scope") { value("dead-letter-list") }
+            jsonPath("$.errorCode") { value("DEAD_LETTER_LIST_TENANT_SCOPE_MISMATCH") }
+        }
+    }
+
+    @Test
+    fun `returns stabilized 400 contract when dead-letter list tenant header is missing`() {
+        val mockMvc = deadLetterMockMvc(record = sampleRecord(UUID.randomUUID()))
+
+        mockMvc.get("/api/v1/dead-letters").andExpect {
+            status { isBadRequest() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.title") { value("Bad Request") }
+            jsonPath("$.type") { value("urn:sentinel:error:dead-letter-list-tenant-scope-required") }
+            jsonPath("$.scope") { value("dead-letter-list") }
+            jsonPath("$.errorCode") { value("DEAD_LETTER_LIST_TENANT_SCOPE_REQUIRED") }
+        }
+    }
+
+    @Test
+    fun `returns stabilized 404 contract when replay audits target is missing`() {
+        val deadLetterId = UUID.randomUUID()
+        val mockMvc = deadLetterMockMvc(record = null)
+
+        mockMvc.get("/api/v1/dead-letters/$deadLetterId/replay-audits") {
+            header("X-Sentinel-Tenant-Id", "tenant-alpha")
+        }.andExpect {
+            status { isNotFound() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.title") { value("Not Found") }
+            jsonPath("$.type") { value("urn:sentinel:error:dead-letter-replay-audits-not-found") }
+            jsonPath("$.scope") { value("dead-letter-replay-audits") }
+            jsonPath("$.errorCode") { value("DEAD_LETTER_REPLAY_AUDITS_NOT_FOUND") }
+            jsonPath("$.deadLetterId") { value(deadLetterId.toString()) }
+        }
+    }
+
+    @Test
+    fun `returns stabilized 400 contract when replay audits cursor is invalid`() {
+        val deadLetterId = UUID.randomUUID()
+        val mockMvc = deadLetterMockMvc(record = sampleRecord(deadLetterId))
+
+        mockMvc.get("/api/v1/dead-letters/$deadLetterId/replay-audits") {
+            header("X-Sentinel-Tenant-Id", "tenant-alpha")
+            param("cursor", "invalid-cursor")
+        }.andExpect {
+            status { isBadRequest() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.title") { value("Bad Request") }
+            jsonPath("$.type") { value("urn:sentinel:error:dead-letter-replay-audits-cursor-invalid") }
+            jsonPath("$.scope") { value("dead-letter-replay-audits") }
+            jsonPath("$.errorCode") { value("DEAD_LETTER_REPLAY_AUDITS_CURSOR_INVALID") }
+        }
+    }
+
     private fun replayMockMvc(
+        record: DeadLetterRecord?,
+        apiProperties: DeadLetterApiProperties = DeadLetterApiProperties(),
+    ): org.springframework.test.web.servlet.MockMvc = deadLetterMockMvc(record = record, apiProperties = apiProperties)
+
+    private fun deadLetterMockMvc(
         record: DeadLetterRecord?,
         apiProperties: DeadLetterApiProperties = DeadLetterApiProperties(),
     ): org.springframework.test.web.servlet.MockMvc {

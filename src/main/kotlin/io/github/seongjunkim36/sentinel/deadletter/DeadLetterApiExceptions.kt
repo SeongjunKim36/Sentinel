@@ -7,6 +7,11 @@ class DeadLetterReplayNotFoundException(
     override val message: String = "Dead-letter replay target not found in scoped tenant.",
 ) : RuntimeException(message)
 
+class DeadLetterReplayAuditsNotFoundException(
+    val deadLetterId: UUID,
+    override val message: String = "Dead-letter replay audits not found in scoped tenant.",
+) : RuntimeException(message)
+
 class DeadLetterReplayBlockedException(
     val deadLetterId: UUID,
     val replayStatus: DeadLetterStatus,

@@ -390,6 +390,22 @@ Dead-letter list and replay-audit endpoints support cursor pagination with a con
 - Request params: `limit`, `cursor`
 - Response shape: `{ "items": [...], "page": { "limit": n, "hasMore": bool, "nextCursor": "..." } }`
 
+Dead-letter list validation failures return `application/problem+json` with:
+
+- `scope=dead-letter-list`
+- `errorCode` values such as `DEAD_LETTER_LIST_TENANT_SCOPE_REQUIRED`, `DEAD_LETTER_LIST_TENANT_SCOPE_MISMATCH`, and `DEAD_LETTER_LIST_CURSOR_INVALID`
+
+Replay-audits validation failures return `application/problem+json` with:
+
+- `scope=dead-letter-replay-audits`
+- `errorCode` values such as `DEAD_LETTER_REPLAY_AUDITS_TENANT_SCOPE_REQUIRED` and `DEAD_LETTER_REPLAY_AUDITS_CURSOR_INVALID`
+
+Replay-audits requests for a missing or out-of-scope dead-letter record return `404` with:
+
+- `scope=dead-letter-replay-audits`
+- `errorCode=DEAD_LETTER_REPLAY_AUDITS_NOT_FOUND`
+- `type=urn:sentinel:error:dead-letter-replay-audits-not-found`
+
 `POST /api/v1/dead-letters/{id}/replay` can include an operator note:
 
 ```json

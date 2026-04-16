@@ -14,21 +14,22 @@ import tools.jackson.databind.json.JsonMapper
 
 class DeadLetterControllerTests {
     @Test
-    fun `returns not found when replay audits requested for missing dead letter`() {
+    fun `throws not found when replay audits requested for missing dead letter`() {
         val deadLetterStore = RecordingDeadLetterStore()
         val auditStore = RecordingDeadLetterReplayAuditStore()
         val controller = deadLetterController(deadLetterStore, auditStore)
 
         val response =
-            controller.findReplayAudits(
-                id = UUID.randomUUID(),
-                limit = 25,
-                cursor = null,
-                tenantScopeHeader = "tenant-alpha",
-            )
+            kotlin.runCatching {
+                controller.findReplayAudits(
+                    id = UUID.randomUUID(),
+                    limit = 25,
+                    cursor = null,
+                    tenantScopeHeader = "tenant-alpha",
+                )
+            }.exceptionOrNull()
 
-        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
-        assertThat(response.body).isNull()
+        assertThat(response).isInstanceOf(DeadLetterReplayAuditsNotFoundException::class.java)
     }
 
     @Test

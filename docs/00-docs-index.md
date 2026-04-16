@@ -35,6 +35,7 @@ Operational runbooks, alerting standards, and observability definitions live her
 - [42. Delivery-Attempt Query Rate-Limit Response Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/42-delivery-attempt-query-rate-limit-response-contract.md)
 - [43. Replay API Error Response Contract Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/43-replay-api-error-response-contract.md)
 - [44. Dead-Letter List and Replay-Audits Error Response Contract Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/44-dead-letter-list-replay-audits-error-response-contract.md)
+- [45. Delivery-Attempt Query Authorization Error Response Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/45-delivery-attempt-query-authorization-error-response-contract.md)
 
 ## 99. ADR
 
@@ -86,4 +87,5 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: delivery-attempt query rate-limit response contract stabilization
 - Done: replay API error response contract baseline
 - Done: dead-letter list/replay-audit error response contract baseline
-- Next: delivery-attempt query authorization error response contract baseline
+- Done: delivery-attempt query authorization error response contract baseline
+- Next: delivery-attempt query validation error response contract baseline

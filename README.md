@@ -307,6 +307,11 @@ export SENTINEL_DELIVERY_QUERY_AUTH_TOKEN=replace-with-strong-token
 ```
 
 When delivery-attempt query authorization is enabled, `GET /api/v1/delivery-attempts` requires the configured token header and returns `401` if missing or invalid.
+Authorization failures return `application/problem+json` with:
+
+- `scope=delivery-attempt-query`
+- `errorCode=DELIVERY_ATTEMPT_QUERY_UNAUTHORIZED`
+- `type=urn:sentinel:error:delivery-attempt-query-unauthorized`
 
 Delivery-attempt query rate-limit options:
 

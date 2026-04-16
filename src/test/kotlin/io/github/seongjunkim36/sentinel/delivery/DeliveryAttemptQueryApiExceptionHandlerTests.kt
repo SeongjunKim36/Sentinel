@@ -9,6 +9,89 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
 class DeliveryAttemptQueryApiExceptionHandlerTests {
     @Test
+    fun `returns stabilized 401 contract when delivery-attempt query authorization header is missing`() {
+        val controller =
+            DeliveryAttemptQueryController(
+                deliveryAttemptStore = EmptyDeliveryAttemptStore,
+                deliveryAttemptQueryAuthorizationService =
+                    DeliveryAttemptQueryAuthorizationService(
+                        deliveryApiProperties =
+                            DeliveryApiProperties(
+                                queryAuthorization =
+                                    DeliveryAttemptQueryAuthorizationProperties(
+                                        enabled = true,
+                                        token = "query-secret",
+                                    ),
+                            ),
+                    ),
+                deliveryAttemptQueryRateLimitService =
+                    DeliveryAttemptQueryRateLimitService(
+                        deliveryApiProperties = DeliveryApiProperties(),
+                        distributedRateLimiter = NoOpDistributedRateLimiter,
+                    ),
+            )
+        val mockMvc =
+            MockMvcBuilders
+                .standaloneSetup(controller)
+                .setControllerAdvice(DeliveryAttemptQueryApiExceptionHandler())
+                .build()
+
+        mockMvc.get("/api/v1/delivery-attempts") {
+            header("X-Sentinel-Tenant-Id", "tenant-alpha")
+        }.andExpect {
+            status { isUnauthorized() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.title") { value("Unauthorized") }
+            jsonPath("$.type") { value("urn:sentinel:error:delivery-attempt-query-unauthorized") }
+            jsonPath("$.scope") { value("delivery-attempt-query") }
+            jsonPath("$.errorCode") { value("DELIVERY_ATTEMPT_QUERY_UNAUTHORIZED") }
+            jsonPath("$.detail") { value("Missing delivery-attempt query authorization header") }
+        }
+    }
+
+    @Test
+    fun `returns stabilized 401 contract when delivery-attempt query authorization token is invalid`() {
+        val controller =
+            DeliveryAttemptQueryController(
+                deliveryAttemptStore = EmptyDeliveryAttemptStore,
+                deliveryAttemptQueryAuthorizationService =
+                    DeliveryAttemptQueryAuthorizationService(
+                        deliveryApiProperties =
+                            DeliveryApiProperties(
+                                queryAuthorization =
+                                    DeliveryAttemptQueryAuthorizationProperties(
+                                        enabled = true,
+                                        token = "query-secret",
+                                    ),
+                            ),
+                    ),
+                deliveryAttemptQueryRateLimitService =
+                    DeliveryAttemptQueryRateLimitService(
+                        deliveryApiProperties = DeliveryApiProperties(),
+                        distributedRateLimiter = NoOpDistributedRateLimiter,
+                    ),
+            )
+        val mockMvc =
+            MockMvcBuilders
+                .standaloneSetup(controller)
+                .setControllerAdvice(DeliveryAttemptQueryApiExceptionHandler())
+                .build()
+
+        mockMvc.get("/api/v1/delivery-attempts") {
+            header("X-Sentinel-Tenant-Id", "tenant-alpha")
+            header("X-Sentinel-Query-Token", "wrong-token")
+        }.andExpect {
+            status { isUnauthorized() }
+            header { string("Cache-Control", "no-store") }
+            jsonPath("$.title") { value("Unauthorized") }
+            jsonPath("$.type") { value("urn:sentinel:error:delivery-attempt-query-unauthorized") }
+            jsonPath("$.scope") { value("delivery-attempt-query") }
+            jsonPath("$.errorCode") { value("DELIVERY_ATTEMPT_QUERY_UNAUTHORIZED") }
+            jsonPath("$.detail") { value("Invalid delivery-attempt query authorization token") }
+        }
+    }
+
+    @Test
     fun `returns stabilized 429 contract when delivery-attempt query rate limit is exceeded`() {
         val controller =
             DeliveryAttemptQueryController(

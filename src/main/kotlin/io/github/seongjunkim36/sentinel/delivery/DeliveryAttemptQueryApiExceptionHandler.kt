@@ -11,8 +11,27 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 class DeliveryAttemptQueryApiExceptionHandler {
     companion object {
         private const val SCOPE = "delivery-attempt-query"
+        private const val UNAUTHORIZED_ERROR_CODE = "DELIVERY_ATTEMPT_QUERY_UNAUTHORIZED"
         private const val RATE_LIMITED_ERROR_CODE = "DELIVERY_ATTEMPT_QUERY_RATE_LIMITED"
         private const val RATE_LIMIT_UNAVAILABLE_ERROR_CODE = "DELIVERY_ATTEMPT_QUERY_RATE_LIMIT_UNAVAILABLE"
+    }
+
+    @ExceptionHandler(DeliveryAttemptQueryUnauthorizedException::class)
+    fun handleQueryUnauthorized(ex: DeliveryAttemptQueryUnauthorizedException): ResponseEntity<ProblemDetail> {
+        val problemDetail =
+            ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNAUTHORIZED,
+                ex.message ?: "Delivery-attempt query authorization failed",
+            )
+        problemDetail.title = "Unauthorized"
+        problemDetail.type = java.net.URI.create("urn:sentinel:error:delivery-attempt-query-unauthorized")
+        problemDetail.setProperty("scope", SCOPE)
+        problemDetail.setProperty("errorCode", UNAUTHORIZED_ERROR_CODE)
+
+        return ResponseEntity
+            .status(HttpStatus.UNAUTHORIZED)
+            .header(HttpHeaders.CACHE_CONTROL, "no-store")
+            .body(problemDetail)
     }
 
     @ExceptionHandler(DeliveryAttemptQueryRateLimitExceededException::class)

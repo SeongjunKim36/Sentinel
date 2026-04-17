@@ -9,6 +9,7 @@ Foundation documents define the direction, scope, and initial implementation str
 - [01. Sentinel Platform Plan](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/01-sentinel-platform-plan.md)
 - [02. MVP Implementation Plan](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/02-mvp-implementation-plan.md)
 - [03. Project Structure Proposal](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/03-project-structure.md)
+- [04. Phase Delivery Checklists](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/04-phase-checklists.md)
 
 ## 20. Domain and Contracts
 

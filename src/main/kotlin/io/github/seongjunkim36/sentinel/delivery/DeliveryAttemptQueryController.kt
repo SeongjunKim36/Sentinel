@@ -5,13 +5,11 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.Base64
 import java.util.UUID
-import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/api/v1/delivery-attempts")
@@ -62,16 +60,25 @@ class DeliveryAttemptQueryController(
         )
     }
 
-    private fun normalizeLimit(limit: Int): Int = limit.coerceIn(1, MAX_QUERY_LIMIT)
+    private fun normalizeLimit(limit: Int): Int {
+        if (limit !in 1..MAX_QUERY_LIMIT) {
+            throw DeliveryAttemptQueryValidationException(
+                reason = DeliveryAttemptQueryValidationReason.LIMIT_OUT_OF_RANGE,
+                message = "limit must be between 1 and $MAX_QUERY_LIMIT",
+                parameter = "limit",
+            )
+        }
+        return limit
+    }
 
     private fun normalizeFilter(value: String?): String? = value?.trim()?.takeIf { it.isNotBlank() }
 
     private fun normalizeTenantScope(tenantScopeHeader: String): String {
         val scopedTenantId = tenantScopeHeader.trim()
         if (scopedTenantId.isBlank()) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "$TENANT_HEADER_NAME header is required",
+            throw DeliveryAttemptQueryValidationException(
+                reason = DeliveryAttemptQueryValidationReason.TENANT_SCOPE_REQUIRED,
+                message = "$TENANT_HEADER_NAME header is required",
             )
         }
         return scopedTenantId
@@ -85,9 +92,10 @@ class DeliveryAttemptQueryController(
             return
         }
         if (tenantId != scopedTenantId) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "tenantId filter must match scoped tenant header",
+            throw DeliveryAttemptQueryValidationException(
+                reason = DeliveryAttemptQueryValidationReason.TENANT_SCOPE_MISMATCH,
+                message = "tenantId filter must match scoped tenant header",
+                parameter = "tenantId",
             )
         }
     }
@@ -119,8 +127,12 @@ class DeliveryAttemptQueryController(
         return Base64.getUrlEncoder().withoutPadding().encodeToString(token.toByteArray(StandardCharsets.UTF_8))
     }
 
-    private fun invalidCursorException(): ResponseStatusException =
-        ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid cursor format")
+    private fun invalidCursorException(): DeliveryAttemptQueryValidationException =
+        DeliveryAttemptQueryValidationException(
+            reason = DeliveryAttemptQueryValidationReason.CURSOR_INVALID,
+            message = "Invalid cursor format",
+            parameter = "cursor",
+        )
 }
 
 data class DeliveryAttemptPageResponse(

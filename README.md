@@ -6,7 +6,8 @@ This repository is intended to be the public, open-source home of the project. I
 
 ## Current Goal
 
-The current goal is to turn the original Phase 1 MVP into a working codebase.
+The Phase 1 MVP baseline is now complete.
+The current goal is to extend that vertical slice into the Phase 2 plugin architecture without regressing the proven end-to-end path.
 
 - Source: Sentry webhook
 - Pipeline: event ingestion -> Kafka -> classification -> LLM root cause analysis -> evaluation and routing
@@ -57,6 +58,7 @@ The current bootstrap implementation already includes:
 - [02. MVP Implementation Plan](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/02-mvp-implementation-plan.md)
 - [03. Project Structure Proposal](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/03-project-structure.md)
 - [04. Phase Delivery Checklists](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/04-phase-checklists.md)
+- [05. Phase 1 Completion Review](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/05-phase-1-completion-review.md)
 - [ADR 0001 - MVP Bootstrap Architecture](/Users/skl-wade/Wade/Sentinel/docs/99-adr/0001-mvp-bootstrap-architecture.md)
 
 ## Working Principles
@@ -313,6 +315,15 @@ Authorization failures return `application/problem+json` with:
 - `scope=delivery-attempt-query`
 - `errorCode=DELIVERY_ATTEMPT_QUERY_UNAUTHORIZED`
 - `type=urn:sentinel:error:delivery-attempt-query-unauthorized`
+
+Validation failures also return `application/problem+json` with stable machine-readable contracts.
+The current validation registry includes:
+
+- `DELIVERY_ATTEMPT_QUERY_TENANT_SCOPE_REQUIRED`
+- `DELIVERY_ATTEMPT_QUERY_TENANT_SCOPE_MISMATCH`
+- `DELIVERY_ATTEMPT_QUERY_CURSOR_INVALID`
+- `DELIVERY_ATTEMPT_QUERY_LIMIT_OUT_OF_RANGE`
+- `DELIVERY_ATTEMPT_QUERY_PARAMETER_INVALID`
 
 Delivery-attempt query rate-limit options:
 

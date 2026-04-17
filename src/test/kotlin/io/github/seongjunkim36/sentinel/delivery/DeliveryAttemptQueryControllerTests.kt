@@ -5,9 +5,7 @@ import java.time.Duration
 import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockHttpServletRequest
-import org.springframework.web.server.ResponseStatusException
 
 class DeliveryAttemptQueryControllerTests {
     @Test
@@ -105,8 +103,9 @@ class DeliveryAttemptQueryControllerTests {
                 )
             }.exceptionOrNull()
 
-        assertThat(exception).isInstanceOf(ResponseStatusException::class.java)
-        assertThat((exception as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(exception).isInstanceOf(DeliveryAttemptQueryValidationException::class.java)
+        assertThat((exception as DeliveryAttemptQueryValidationException).reason)
+            .isEqualTo(DeliveryAttemptQueryValidationReason.CURSOR_INVALID)
     }
 
     @Test
@@ -128,8 +127,9 @@ class DeliveryAttemptQueryControllerTests {
                 )
             }.exceptionOrNull()
 
-        assertThat(exception).isInstanceOf(ResponseStatusException::class.java)
-        assertThat((exception as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(exception).isInstanceOf(DeliveryAttemptQueryValidationException::class.java)
+        assertThat((exception as DeliveryAttemptQueryValidationException).reason)
+            .isEqualTo(DeliveryAttemptQueryValidationReason.TENANT_SCOPE_MISMATCH)
     }
 
     @Test
@@ -151,8 +151,57 @@ class DeliveryAttemptQueryControllerTests {
                 )
             }.exceptionOrNull()
 
-        assertThat(exception).isInstanceOf(ResponseStatusException::class.java)
-        assertThat((exception as ResponseStatusException).statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+        assertThat(exception).isInstanceOf(DeliveryAttemptQueryValidationException::class.java)
+        assertThat((exception as DeliveryAttemptQueryValidationException).reason)
+            .isEqualTo(DeliveryAttemptQueryValidationReason.TENANT_SCOPE_REQUIRED)
+    }
+
+    @Test
+    fun `rejects delivery-attempt query limit when it is below the supported range`() {
+        val store = RecordingStore()
+        val controller = deliveryAttemptController(store)
+
+        val exception =
+            kotlin.runCatching {
+                controller.findRecent(
+                    eventId = null,
+                    tenantId = null,
+                    channel = null,
+                    success = null,
+                    limit = 0,
+                    cursor = null,
+                    tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = MockHttpServletRequest(),
+                )
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(DeliveryAttemptQueryValidationException::class.java)
+        assertThat((exception as DeliveryAttemptQueryValidationException).reason)
+            .isEqualTo(DeliveryAttemptQueryValidationReason.LIMIT_OUT_OF_RANGE)
+    }
+
+    @Test
+    fun `rejects delivery-attempt query limit when it exceeds the supported range`() {
+        val store = RecordingStore()
+        val controller = deliveryAttemptController(store)
+
+        val exception =
+            kotlin.runCatching {
+                controller.findRecent(
+                    eventId = null,
+                    tenantId = null,
+                    channel = null,
+                    success = null,
+                    limit = 201,
+                    cursor = null,
+                    tenantScopeHeader = "tenant-alpha",
+                    httpServletRequest = MockHttpServletRequest(),
+                )
+            }.exceptionOrNull()
+
+        assertThat(exception).isInstanceOf(DeliveryAttemptQueryValidationException::class.java)
+        assertThat((exception as DeliveryAttemptQueryValidationException).reason)
+            .isEqualTo(DeliveryAttemptQueryValidationReason.LIMIT_OUT_OF_RANGE)
     }
 
     @Test

@@ -204,3 +204,5 @@ The Phase 1 implementation is in good shape when all of the following are true.
 - Kafka, PostgreSQL, and Redis can be reproduced locally
 - Pipeline responsibilities are clearly separated in code
 - The codebase already points toward the Phase 2 plugin architecture
+
+The current repository review for these criteria is recorded in [05. Phase 1 Completion Review](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/05-phase-1-completion-review.md).

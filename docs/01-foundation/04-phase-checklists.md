@@ -16,7 +16,7 @@ Use it as the high-level phase board for the project.
 
 ## Current Snapshot
 
-- Phase 1: In progress, late-stage hardening
+- Phase 1: Complete
 - Phase 2: Foundations in place, expansion not complete
 - Phase 3: Not started as a dedicated implementation phase
 - Phase 4: Partial groundwork completed during MVP hardening
@@ -25,7 +25,7 @@ Use it as the high-level phase board for the project.
 
 Goal: one source, one analysis path, one output channel, full end-to-end traceability.
 
-Status: in progress
+Status: complete
 
 - [x] Local Spring Boot application and Docker Compose environment exist
 - [x] Shared event model and pipeline contracts are implemented
@@ -46,8 +46,8 @@ Status: in progress
 - [x] Webhook signature validation and replay API hardening baselines are implemented
 - [x] Delivery-attempt query pagination, tenant scope, authorization, and rate limiting are hardened
 - [x] Delivery-attempt query rate-limit and authorization error contracts are stabilized
-- [ ] Delivery-attempt query validation error response contract baseline is implemented
-- [ ] Phase 1 completion criteria are reviewed and explicitly marked complete
+- [x] Delivery-attempt query validation error response contract baseline is implemented
+- [x] Phase 1 completion criteria are reviewed and explicitly marked complete
 
 ## Phase 2. Plugin Architecture
 
@@ -99,4 +99,4 @@ Status: partial groundwork completed
 
 If we continue from the current execution log, the next public delivery slice is:
 
-- `delivery-attempt query validation error response contract baseline`
+- `RSS source plugin baseline`

@@ -10,6 +10,7 @@ Foundation documents define the direction, scope, and initial implementation str
 - [02. MVP Implementation Plan](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/02-mvp-implementation-plan.md)
 - [03. Project Structure Proposal](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/03-project-structure.md)
 - [04. Phase Delivery Checklists](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/04-phase-checklists.md)
+- [05. Phase 1 Completion Review](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/05-phase-1-completion-review.md)
 
 ## 20. Domain and Contracts
 
@@ -37,6 +38,7 @@ Operational runbooks, alerting standards, and observability definitions live her
 - [43. Replay API Error Response Contract Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/43-replay-api-error-response-contract.md)
 - [44. Dead-Letter List and Replay-Audits Error Response Contract Baseline](/Users/skl-wade/Wade/Sentinel/docs/30-operations/44-dead-letter-list-replay-audits-error-response-contract.md)
 - [45. Delivery-Attempt Query Authorization Error Response Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/45-delivery-attempt-query-authorization-error-response-contract.md)
+- [46. Delivery-Attempt Query Validation Error Response Contract](/Users/skl-wade/Wade/Sentinel/docs/30-operations/46-delivery-attempt-query-validation-error-response-contract.md)
 
 ## 99. ADR
 
@@ -89,4 +91,6 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: replay API error response contract baseline
 - Done: dead-letter list/replay-audit error response contract baseline
 - Done: delivery-attempt query authorization error response contract baseline
-- Next: delivery-attempt query validation error response contract baseline
+- Done: delivery-attempt query validation error response contract baseline
+- Done: Phase 1 completion review
+- Next: RSS source plugin baseline

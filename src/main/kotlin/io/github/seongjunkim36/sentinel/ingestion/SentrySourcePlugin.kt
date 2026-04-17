@@ -2,7 +2,7 @@ package io.github.seongjunkim36.sentinel.ingestion
 
 import io.github.seongjunkim36.sentinel.shared.Event
 import io.github.seongjunkim36.sentinel.shared.EventMetadata
-import io.github.seongjunkim36.sentinel.shared.SourcePlugin
+import io.github.seongjunkim36.sentinel.shared.WebhookSourcePlugin
 import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.json.JsonMapper
 import org.springframework.stereotype.Component
@@ -11,7 +11,7 @@ import tools.jackson.databind.JsonNode
 @Component
 class SentrySourcePlugin(
     private val jsonMapper: JsonMapper,
-) : SourcePlugin {
+) : WebhookSourcePlugin {
     override val type: String = "sentry"
 
     override fun normalize(

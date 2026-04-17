@@ -11,6 +11,7 @@ Foundation documents define the direction, scope, and initial implementation str
 - [03. Project Structure Proposal](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/03-project-structure.md)
 - [04. Phase Delivery Checklists](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/04-phase-checklists.md)
 - [05. Phase 1 Completion Review](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/05-phase-1-completion-review.md)
+- [06. Source Plugin Extension Workflow](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/06-source-plugin-extension-workflow.md)
 
 ## 20. Domain and Contracts
 
@@ -18,6 +19,7 @@ Domain-level behavior and contract semantics are documented here.
 
 - [21. Analysis Prompt Versioning and Rollout](/Users/skl-wade/Wade/Sentinel/docs/20-domain/21-analysis-prompt-versioning.md)
 - [22. Routing Policy and Channel Mapping](/Users/skl-wade/Wade/Sentinel/docs/20-domain/22-routing-policy-and-channel-mapping.md)
+- [23. RSS Source Plugin Baseline](/Users/skl-wade/Wade/Sentinel/docs/20-domain/23-rss-source-plugin-baseline.md)
 
 ## 30. Operations
 
@@ -93,4 +95,6 @@ The public MVP implementation is being delivered in numbered, reviewable units.
 - Done: delivery-attempt query authorization error response contract baseline
 - Done: delivery-attempt query validation error response contract baseline
 - Done: Phase 1 completion review
-- Next: RSS source plugin baseline
+- Done: RSS source plugin baseline
+- Done: source plugin extension workflow baseline
+- Next: email output plugin baseline

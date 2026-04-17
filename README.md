@@ -38,6 +38,8 @@ The current bootstrap implementation already includes:
 - switchable LLM provider mode (`bootstrap` or `openai`)
 - a real `SlackOutputPlugin` backed by Slack `chat.postMessage`
 - a real `TelegramOutputPlugin` for end-to-end delivery testing
+- a generic source polling API for non-webhook source plugins
+- a real `RssSourcePlugin` that normalizes RSS and Atom feed entries into shared events
 - a replaceable `LlmClient` boundary for future provider integrations
 - integration tests that verify webhook-to-Kafka, raw-to-classified, classified-to-analysis, and analysis-to-routing delivery
 
@@ -59,6 +61,8 @@ The current bootstrap implementation already includes:
 - [03. Project Structure Proposal](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/03-project-structure.md)
 - [04. Phase Delivery Checklists](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/04-phase-checklists.md)
 - [05. Phase 1 Completion Review](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/05-phase-1-completion-review.md)
+- [06. Source Plugin Extension Workflow](/Users/skl-wade/Wade/Sentinel/docs/01-foundation/06-source-plugin-extension-workflow.md)
+- [23. RSS Source Plugin Baseline](/Users/skl-wade/Wade/Sentinel/docs/20-domain/23-rss-source-plugin-baseline.md)
 - [ADR 0001 - MVP Bootstrap Architecture](/Users/skl-wade/Wade/Sentinel/docs/99-adr/0001-mvp-bootstrap-architecture.md)
 
 ## Working Principles
@@ -361,6 +365,28 @@ Sentinel exposes delivery-plugin readiness for operations checks.
 - Actuator readiness: `GET /actuator/health/readiness`
 
 Readiness is `DOWN` when any required default channel in `sentinel.delivery.default-channels` is missing a registered plugin or required channel configuration.
+
+## RSS Source Polling
+
+Sentinel exposes a generic source polling API so polling-based source plugins can feed the same raw event pipeline used by webhook sources.
+
+- API endpoint: `POST /api/v1/sources/rss/poll`
+- Required header: `X-Sentinel-Tenant-Id`
+- Request body: `feedUrl`, optional `maxItems`
+
+Example:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/sources/rss/poll \
+  -H "Content-Type: application/json" \
+  -H "X-Sentinel-Tenant-Id: tenant-alpha" \
+  -d '{
+    "feedUrl": "https://feeds.example.com/releases.xml",
+    "maxItems": 5
+  }'
+```
+
+Successful polling returns `202 Accepted` and publishes normalized `rss` events into `sentinel.raw-events`.
 
 ## Dead-Letter Handling and Replay
 

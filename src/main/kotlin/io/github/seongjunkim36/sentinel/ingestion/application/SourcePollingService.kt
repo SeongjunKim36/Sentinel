@@ -2,34 +2,33 @@ package io.github.seongjunkim36.sentinel.ingestion.application
 
 import io.github.seongjunkim36.sentinel.observability.PipelineMetrics
 import io.github.seongjunkim36.sentinel.shared.Event
-import io.github.seongjunkim36.sentinel.shared.WebhookSourcePlugin
+import io.github.seongjunkim36.sentinel.shared.PollingSourcePlugin
 import org.springframework.stereotype.Service
 import tools.jackson.databind.JsonNode
 
 @Service
-class WebhookIntakeService(
-    sourcePlugins: List<WebhookSourcePlugin>,
+class SourcePollingService(
+    pollingSourcePlugins: List<PollingSourcePlugin>,
     private val rawEventPublisher: RawEventPublisher,
 ) {
-    private val sourcePluginIndex = sourcePlugins.associateBy { it.type }
+    private val sourcePluginIndex = pollingSourcePlugins.associateBy { it.type }
 
-    fun acceptWebhook(
+    fun pollSource(
         sourceType: String,
         tenantId: String,
-        payload: JsonNode,
+        request: JsonNode,
         headers: Map<String, String>,
-    ): Event {
+    ): List<Event> {
         val plugin = sourcePluginIndex[sourceType]
             ?: throw UnsupportedSourceTypeException(sourceType)
 
-        val event = plugin.normalize(
-            rawPayload = payload,
+        return plugin.poll(
             tenantId = tenantId,
+            request = request,
             headers = headers,
-        )
-
-        rawEventPublisher.publish(event)
-        PipelineMetrics.recordIngestion(event.sourceType)
-        return event
+        ).onEach { event ->
+            rawEventPublisher.publish(event)
+            PipelineMetrics.recordIngestion(event.sourceType)
+        }
     }
 }

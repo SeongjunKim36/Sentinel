@@ -17,7 +17,7 @@ Use it as the high-level phase board for the project.
 ## Current Snapshot
 
 - Phase 1: Complete
-- Phase 2: Foundations in place, expansion not complete
+- Phase 2: In progress, source-side extension proven
 - Phase 3: Not started as a dedicated implementation phase
 - Phase 4: Partial groundwork completed during MVP hardening
 
@@ -53,7 +53,7 @@ Status: complete
 
 Goal: new sources or outputs can be added without changing the core flow.
 
-Status: foundations in place
+Status: in progress
 
 - [x] `SourcePlugin` contract exists
 - [x] `OutputPlugin` contract exists
@@ -62,9 +62,9 @@ Status: foundations in place
 - [x] Telegram delivery is wired through an output plugin boundary
 - [x] Output plugin registry and readiness checks exist
 - [x] Prompt version management is externalized as part of extensibility groundwork
-- [ ] RSS source plugin is implemented
+- [x] RSS source plugin is implemented
 - [ ] Email output plugin is implemented
-- [ ] A documented extension workflow proves that new plugins can be added without core flow changes
+- [x] A documented extension workflow proves that new plugins can be added without core flow changes
 
 ## Phase 3. Dashboard And Customer Inquiry Flow
 
@@ -99,4 +99,4 @@ Status: partial groundwork completed
 
 If we continue from the current execution log, the next public delivery slice is:
 
-- `RSS source plugin baseline`
+- `email output plugin baseline`

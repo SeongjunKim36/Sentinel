@@ -17,6 +17,11 @@ class BootstrapLlmClient : LlmClient {
     override fun analyze(classifiedEvent: ClassifiedEvent): LlmAnalysisResponse {
         val message = classifiedEvent.event.payload["message"]?.toString()?.trim().orEmpty()
         val normalizedMessage = message.lowercase()
+        val subject =
+            when (classifiedEvent.category) {
+                "feed-update" -> "update"
+                else -> "incident"
+            }
         val severity =
             when {
                 "outage" in normalizedMessage -> Severity.CRITICAL
@@ -25,7 +30,7 @@ class BootstrapLlmClient : LlmClient {
             }
 
         return LlmAnalysisResponse(
-            summary = "Potential $severity incident detected from ${classifiedEvent.event.sourceType}.",
+            summary = "Potential $severity $subject detected from ${classifiedEvent.event.sourceType}.",
             analysis = buildString {
                 append("Bootstrap analysis inferred an ")
                 append(classifiedEvent.category)

@@ -9,7 +9,8 @@ class DeliveryMessageFormatter {
         buildString {
             append("[Sentinel] ")
             append(result.severity)
-            append(" incident")
+            append(' ')
+            append(resultLabel(result))
             appendLine()
             append("Category: ")
             append(result.category)
@@ -33,7 +34,8 @@ class DeliveryMessageFormatter {
         buildString {
             append("*[Sentinel]* ")
             append(result.severity)
-            append(" incident")
+            append(' ')
+            append(resultLabel(result))
             appendLine()
             append("*Category:* `")
             append(result.category)
@@ -56,5 +58,11 @@ class DeliveryMessageFormatter {
                     append(actionItem)
                 }
             }
+        }
+
+    private fun resultLabel(result: AnalysisResult): String =
+        when (result.category) {
+            "feed-update" -> "update"
+            else -> "incident"
         }
 }

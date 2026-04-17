@@ -41,10 +41,33 @@ class ClassificationServiceTests {
         assertThat(classifiedEvent.tags).contains("dedup:duplicate")
     }
 
-    private fun event(message: String): Event =
+    @Test
+    fun `classifies rss feed updates as analyzable`() {
+        val classificationService = ClassificationService(StubEventDeduplicationStore(firstSeen = true))
+
+        val classifiedEvent =
+            classificationService.classify(
+                event(
+                    sourceType = "rss",
+                    sourceId = "https://example.com/post-1",
+                    message = "Platform release notes - Improved checkout resilience",
+                ),
+            )
+
+        assertThat(classifiedEvent.category).isEqualTo("feed-update")
+        assertThat(classifiedEvent.analyzable).isTrue()
+        assertThat(classifiedEvent.filtered).isFalse()
+        assertThat(classifiedEvent.tags).contains("source:rss", "category:feed-update")
+    }
+
+    private fun event(
+        message: String,
+        sourceType: String = "sentry",
+        sourceId: String = "evt-123",
+    ): Event =
         Event(
-            sourceType = "sentry",
-            sourceId = "evt-123",
+            sourceType = sourceType,
+            sourceId = sourceId,
             tenantId = "tenant-alpha",
             payload = mapOf("message" to message),
             metadata = EventMetadata(sourceVersion = "v1"),

@@ -12,7 +12,7 @@ class ClassificationService(
         val category = categoryFor(event)
         val message = event.payload["message"]?.toString()?.trim().orEmpty()
         val initialFilterReason = filterReasonFor(message)
-        val analyzableCandidate = initialFilterReason == null && category == "error"
+        val analyzableCandidate = initialFilterReason == null && isAnalyzableCategory(category)
         val deduplicationFilterReason =
             if (analyzableCandidate && !eventDeduplicationStore.markIfFirstSeen(event)) {
                 "duplicate-event"
@@ -24,7 +24,7 @@ class ClassificationService(
         return ClassifiedEvent(
             event = event,
             category = category,
-            analyzable = filterReason == null && category == "error",
+            analyzable = filterReason == null && isAnalyzableCategory(category),
             filtered = filterReason != null,
             filterReason = filterReason,
             tags =
@@ -41,8 +41,11 @@ class ClassificationService(
     private fun categoryFor(event: Event): String =
         when (event.sourceType.lowercase()) {
             "sentry" -> "error"
+            "rss" -> "feed-update"
             else -> "generic"
         }
+
+    private fun isAnalyzableCategory(category: String): Boolean = category in setOf("error", "feed-update")
 
     private fun filterReasonFor(message: String): String? {
         if (message.isBlank()) {
